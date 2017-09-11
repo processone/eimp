@@ -1,0 +1,232 @@
+%%%----------------------------------------------------------------------
+%%% File    : rebar.config.script
+%%% Author  : Evgeniy Khramtsov <ekhramtsov@process-one.net>
+%%% Purpose : Rebar build script. Compliant with rebar and rebar3.
+%%% Created : 8 May 2013 by Evgeniy Khramtsov <ekhramtsov@process-one.net>
+%%%
+%%% Copyright (C) 2002-2017 ProcessOne, SARL. All Rights Reserved.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%     http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
+%%%----------------------------------------------------------------------
+
+Cfg = case file:consult(filename:join([filename:dirname(SCRIPT),"vars.config"])) of
+          {ok, Terms} ->
+              Terms;
+          _Err ->
+              []
+      end ++ [{cflags, "-g -O2 -Wall"},
+	      {ldflags, "-lwebp -lpng -ljpeg -lgd  -lpthread -lz -lm"},
+	      {with_gcov, "false"}],
+{cflags, CfgCFlags} = lists:keyfind(cflags, 1, Cfg),
+{ldflags, CfgLDFlags} = lists:keyfind(ldflags, 1, Cfg),
+{with_gcov, CfgWithGCov} = lists:keyfind(with_gcov, 1, Cfg),
+
+IsRebar3 = case application:get_key(rebar, vsn) of
+	       {ok, VSN} ->
+		   [VSN1 | _] = string:tokens(VSN, "-"),
+		   [Maj, Min, Patch] = string:tokens(VSN1, "."),
+		   (list_to_integer(Maj) >= 3);
+	       undefined ->
+		   lists:keymember(mix, 1, application:loaded_applications())
+	   end,
+
+SysVer = erlang:system_info(otp_release),
+
+ProcessSingleVar = fun(F, Var, Tail) ->
+			   case F(F, [Var], []) of
+			       [] -> Tail;
+			       [Val] -> [Val | Tail]
+			   end
+		   end,
+
+ProcessVars = fun(_F, [], Acc) ->
+		      lists:reverse(Acc);
+		 (F, [{Type, Ver, Value} | Tail], Acc) when
+			Type == if_version_above orelse
+			Type == if_version_below ->
+		      SysVer = erlang:system_info(otp_release),
+		      Include = if Type == if_version_above ->
+					SysVer > Ver;
+				   true ->
+					SysVer < Ver
+				end,
+		      if Include ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			 true ->
+			      F(F, Tail, Acc)
+		      end;
+		 (F, [{Type, Ver, Value, ElseValue} | Tail], Acc) when
+			Type == if_version_above orelse
+			Type == if_version_below ->
+		      Include = if Type == if_version_above ->
+					SysVer > Ver;
+				   true ->
+					SysVer < Ver
+				end,
+		      if Include ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			 true ->
+			      F(F, Tail, ProcessSingleVar(F, ElseValue, Acc))
+		      end;
+		 (F, [{Type, Var, Value} | Tail], Acc) when
+			Type == if_var_true orelse
+			Type == if_var_false ->
+		      Flag = Type == if_var_true,
+		      case proplists:get_bool(Var, Cfg) of
+			  V when V == Flag ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			  _ ->
+			      F(F, Tail, Acc)
+		      end;
+		 (F, [{Type, Value} | Tail], Acc) when
+			Type == if_rebar3 orelse
+			Type == if_not_rebar3 ->
+		      Flag = Type == if_rebar3,
+		      case IsRebar3 == Flag of
+			  true ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			  _ ->
+			      F(F, Tail, Acc)
+		      end;
+		 (F, [{Type, Var, Match, Value} | Tail], Acc) when
+			Type == if_var_match orelse
+			Type == if_var_no_match ->
+		      case proplists:get_value(Var, Cfg) of
+			  V when V == Match ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			  _ ->
+			      F(F, Tail, Acc)
+		      end;
+		 (F, [{if_have_fun, MFA, Value} | Tail], Acc) ->
+		      {Mod, Fun, Arity} = MFA,
+		      code:ensure_loaded(Mod),
+		      case erlang:function_exported(Mod, Fun, Arity) of
+			  true ->
+			      F(F, Tail, ProcessSingleVar(F, Value, Acc));
+			  false ->
+			      F(F, Tail, Acc)
+		      end;
+		 (F, [Other1 | Tail1], Acc) ->
+		      F(F, Tail1, [F(F, Other1, []) | Acc]);
+		 (F, Val, Acc) when is_tuple(Val) ->
+		      list_to_tuple(F(F, tuple_to_list(Val), Acc));
+		 (_F, Other2, _Acc) ->
+		      Other2
+	      end,
+
+JobId = case os:getenv("TRAVIS_JOB_ID") of false -> ""; V -> V end,
+
+ModCfg0 = fun(F, Cfg, [Key|Tail], Op, Default) ->
+		  {OldVal,PartCfg} = case lists:keytake(Key, 1, Cfg) of
+					 {value, {_, V1}, V2} -> {V1, V2};
+					 false -> {if Tail == [] -> Default; true -> [] end, Cfg}
+				     end,
+		  case Tail of
+		      [] ->
+			  [{Key, Op(OldVal)} | PartCfg];
+		      _ ->
+			  [{Key, F(F, OldVal, Tail, Op, Default)} | PartCfg]
+		  end
+	  end,
+	ModCfg = fun(Cfg, Keys, Op, Default) -> ModCfg0(ModCfg0, Cfg, Keys, Op,
+		  Default) end,
+
+	ModCfgS = fun(Cfg, Keys, Val) -> ModCfg0(ModCfg0, Cfg, Keys, fun(_V) ->
+		  Val end, "") end,
+
+
+FilterConfig = fun(F, Cfg, [{Path, true, ModFun, Default} | Tail]) ->
+		       F(F, ModCfg0(ModCfg0, Cfg, Path, ModFun, Default), Tail);
+		  (F, Cfg, [_ | Tail]) ->
+		       F(F, Cfg, Tail);
+		  (F, Cfg, []) ->
+		       Cfg
+	       end,
+
+AppendStr = fun(Append) ->
+		    fun("") ->
+			    Append;
+		       (Val) ->
+			    Val ++ " " ++ Append
+		    end
+	    end,
+AppendList = fun(Append) ->
+		     fun(Val) ->
+			     Val ++ Append
+		     end
+	     end,
+
+Rebar3DepsFilter = fun(DepsList) ->
+			   lists:map(fun({DepName,_, {git,_, {tag,Version}}}) ->
+					     {DepName, Version};
+					(Dep) ->
+					     Dep
+				     end, DepsList)
+		   end,
+
+GlobalDepsFilter = fun(Deps) ->
+			   DepNames = lists:map(fun({DepName, _, _}) -> DepName;
+						   ({DepName, _}) -> DepName
+						   end, Deps),
+			   lists:filtermap(fun(Dep) ->
+						 case code:lib_dir(Dep) of
+						     {error, _} ->
+							 {true,"Unable to locate dep '"++atom_to_list(Dep)++"' in system deps."};
+						     _ ->
+							 false
+						 end
+					 end, DepNames)
+		   end,
+
+Rules = [
+	 {[port_env, "CFLAGS"], true,
+	  AppendStr(CfgCFlags), "$CFLAGS"},
+	 {[port_env, "LDFLAGS"], true,
+	  AppendStr(CfgLDFlags), "$LDFLAGS"},
+	 {[post_hooks], CfgWithGCov == "true",
+	  AppendList([{eunit, "gcov -o c_src eimp"},
+		      {eunit, "mv *.gcov .eunit/"}]), []},
+	 {[port_env, "LDFLAGS"], CfgWithGCov == "true",
+	  AppendStr("--coverage"), ""},
+	 {[port_env, "CFLAGS"], CfgWithGCov == "true",
+	  AppendStr("--coverage"), ""},
+	 {[deps], IsRebar3,
+	  Rebar3DepsFilter, []},
+	 {[plugins], IsRebar3,
+	  AppendList([rebar3_hex, pc]), []},
+	 {[provider_hooks], IsRebar3,
+	  AppendList([{pre, [
+			     {compile, {pc, compile}},
+			     {clean, {pc, clean}}
+			    ]}]), []},
+	 {[deps], os:getenv("TRAVIS") == "true",
+	  AppendList([{coveralls, ".*", {git, "https://github.com/markusn/coveralls-erl.git", "master"}}]), []},
+	 {[post_hooks], os:getenv("TRAVIS") == "true",
+	  AppendList([{eunit, "echo '\n%%! -pa .eunit/ deps/coveralls/ebin\nmain(_)->{ok,F}=file:open(\"erlang.json\",[write]),io:fwrite(F,\"~s\",[coveralls:convert_file(\".eunit/cover.coverdata\", \""++JobId++"\", \"travis-ci\",\"\")]).' > getcover.erl"},
+		      {eunit, "escript ./getcover.erl"}]), []},
+	 {[deps], os:getenv("USE_GLOBAL_DEPS") /= false,
+	  GlobalDepsFilter, []}
+	],
+
+
+Config = FilterConfig(FilterConfig, ProcessVars(ProcessVars, CONFIG, []), Rules),
+
+%io:format("Rules:~n~p~n~nCONFIG:~n~p~n~nConfig:~n~p~n", [Rules, CONFIG, Config]),
+
+Config.
+
+%% Local Variables:
+%% mode: erlang
+%% End:
+%% vim: set filetype=erlang tabstop=8:
