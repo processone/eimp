@@ -1,5 +1,5 @@
 {cflags, "@CFLAGS@"}.
-{ldflags, "@LDFLAGS@ @LIBS@ -lpthread -lz -lm"}.
+{ldflags, "@LDFLAGS@ @LIBS@ -lpthread"}.
 {with_gcov, "@gcov@"}.
 
 %% Local Variables:
