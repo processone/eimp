@@ -25,7 +25,7 @@ test: all
 	$(REBAR) -v skip_deps=true eunit
 
 xref: all
-        $(REBAR) skip_deps=true xref
+	$(REBAR) skip_deps=true xref
 
 deps := $(wildcard deps/*/ebin)
 
