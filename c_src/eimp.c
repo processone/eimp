@@ -271,6 +271,33 @@ int identify(uint8_t *pid, uint8_t from, uint8_t *buf, size_t size)
     return write_error(pid, "unsupported_format");
 }
 
+/*
+  The data accepted/produced by the port has always the following format
+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                         Data Lenght                           |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |                                                               |
+  |                             Data                              |
+  |                                                               |
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+  where Data is always prefixed with a caller's PID represented in
+  an external Erlang term format. This PID representation is prefixed
+  by its length, which is always one byte long (i.e. the maximum lenth
+  can only be 255 bytes):
+
+  0                   1                   2                   3
+  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  |     PID Length    | Caller's PID in external format ...
+  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+  After PID there goes a command identifier of one byte long. The
+  identifier is used to choose how to process further payload.
+*/
 void loop(void)
 {
   uint32_t tag;
