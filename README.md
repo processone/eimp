@@ -72,6 +72,7 @@ using `get_type/1` function. In the case of an error you can use `Reason` to pro
 a human-readable diagnostic text using `format_error/1`.
 The `Timeout` should be provided in _milliseconds_. Also note, that you cannot
 use `infinity` or `unlimited` as a value for `Timeout`.
+
 **WARNING**: the maximum resolution of an incoming image is hardcoded to be 25Mpx.
 This is a protection against decompression bombs.
 
@@ -86,6 +87,7 @@ The function returns information about image `Img`, where `Info` is represented 
  {height, Height :: non_neg_integer()}]
 ```
 It is safe to assume that `Info` always contains all these properties.
+
 **NOTE**: If you only need to get a type of an image, you're better off using
 `get_type/1` function, because it doesn't involve interaction with `eimp` process
 and is, thus, much faster.
