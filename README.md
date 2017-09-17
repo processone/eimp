@@ -75,6 +75,18 @@ use `infinity` or `unlimited` as a value for `Timeout`.
 **WARNING**: the maximum resolution of an incoming image is hardcoded to be 25Mpx.
 This is a protection against decompression bombs.
 
+### identify/1
+```erl
+-spec identify(Img :: binary()) -> {ok, Info :: info()} | {error, error_reason()}.
+```
+The function returns information about image `Img`, where `Info` is represented as:
+```erl
+[{type, Type :: img_type()},
+ {width, Width :: non_neg_integer()},
+ {height, Height :: non_neg_integer()}]
+```
+It is safe to assume that `Info` contains all these properties.
+
 ### format_error/1
 ```erl
 -spec format_error(Reason :: error_reason()) -> binary().
@@ -86,7 +98,8 @@ The `Reason` can have the following values:
                         timeout |
                         disconnected |
                         encode_failure |
-                        decode_failure.
+                        decode_failure |
+			image_too_big.
 ```
 
 ### get_type/1

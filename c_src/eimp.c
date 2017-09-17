@@ -32,6 +32,8 @@
 #define PNG 'p'
 #define JPEG 'j'
 #define WEBP 'w'
+#define CMD_CONVERT 1
+#define CMD_IDENTIFY 2
 
 int is_known(char format)
 {
@@ -55,7 +57,7 @@ void eimp_jpeg_error_exit(j_common_ptr cinfo)
   longjmp(myerr->setjmp_buffer, 1);
 }
 
-int check_jpeg_header(uint8_t *buf, size_t size)
+int check_jpeg_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   struct jpeg_decompress_struct cinfo;
   struct eimp_jpeg_error_mgr jerr;
@@ -71,29 +73,30 @@ int check_jpeg_header(uint8_t *buf, size_t size)
   jpeg_create_decompress(&cinfo);
   jpeg_mem_src(&cinfo, buf, size);
   if (jpeg_read_header(&cinfo, TRUE) == JPEG_HEADER_OK) {
-    size_t width = cinfo.image_width;
-    size_t height = cinfo.image_height;
-    if (width * height < MAX_RESOLUTION)
-      ret = 1;
+    *width = cinfo.image_width;
+    *height = cinfo.image_height;
+    ret = 1;
   };
   jpeg_destroy_decompress(&cinfo);
   return ret;
 }
 /* End of retardation */
 
-int check_webp_header(uint8_t *buf, size_t size)
+int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
-  int width, height;
-  if (WebPGetInfo(buf, size, &width, &height)) {
-    if (width * height < MAX_RESOLUTION)
-      return 1;
+  int w, h;
+  if (WebPGetInfo(buf, size, &w, &h)) {
+    *width = w;
+    *height = h;
+    return 1;
   }
+
   return 0;
 }
 
-int check_png_header(uint8_t *buf, size_t size)
+int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
-  uint32_t width, height;
+  uint32_t w, h;
   int ret = 0;
 
   /* libpng's API is as shitty as libjpeg's one,
@@ -105,33 +108,39 @@ int check_png_header(uint8_t *buf, size_t size)
      gdImageCreateFromPngPtr() will fail later */
   if (size > 24) {
     if (!png_sig_cmp(buf, 0, 8)) {
-      memcpy(&width, buf+16, 4);
-      memcpy(&height, buf+20, 4);
-      if (ntohl(width) * ntohl(height) < MAX_RESOLUTION)
-	ret = 1;
+      memcpy(&w, buf+16, 4);
+      memcpy(&h, buf+20, 4);
+      *width = ntohl(w);
+      *height = ntohl(h);
+      ret = 1;
     }
   }
   return ret;
+}
+
+int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_t *height)
+{
+  switch (format) {
+  case PNG:
+    return check_png_header(buf, size, width, height);
+  case JPEG:
+    return check_jpeg_header(buf, size, width, height);
+  case WEBP:
+    return check_webp_header(buf, size, width, height);
+  default:
+    return 0;
+  }
 }
 
 gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
 {
   switch (format) {
   case WEBP:
-    if (check_webp_header(buf, size))
-      return gdImageCreateFromWebpPtr(size, buf);
-    else
-      return NULL;
+    return gdImageCreateFromWebpPtr(size, buf);
   case PNG:
-    if (check_png_header(buf, size))
-      return gdImageCreateFromPngPtr(size, buf);
-    else
-      return NULL;
+    return gdImageCreateFromPngPtr(size, buf);
   case JPEG:
-    if (check_jpeg_header(buf, size))
-      return gdImageCreateFromJpegPtr(size, buf);
-    else
-      return NULL;
+    return gdImageCreateFromJpegPtr(size, buf);
   default:
     return NULL;
   }
@@ -219,43 +228,82 @@ int convert(uint8_t *pid, uint8_t from, uint8_t to, uint8_t *ibuf, size_t isize)
 {
   gdImagePtr im;
   int osize, write_result;
+  size_t width, height;
 
   if (is_known(from) && is_known(to)) {
-    im = decode(from, ibuf, isize);
-    if (!im)
+    if (check_header(from, ibuf, isize, &width, &height)) {
+      if (width * height < MAX_RESOLUTION) {
+	im = decode(from, ibuf, isize);
+	if (!im)
+	  return write_error(pid, "decode_failure");
+	
+	uint8_t *obuf = encode(to, im, &osize);
+	gdImageDestroy(im);
+	if (!obuf)
+	  return write_error(pid, "encode_failure");
+	
+	write_result = write_data(pid, obuf, osize);
+	gdFree(obuf);
+	return write_result;
+      } else {
+	return write_error(pid, "image_too_big");
+      }
+    } else {
       return write_error(pid, "decode_failure");
-    
-    uint8_t *obuf = encode(to, im, &osize);
-    gdImageDestroy(im);
-    if (!obuf)
-      return write_error(pid, "encode_failure");
-
-    write_result = write_data(pid, obuf, osize);
-    gdFree(obuf);
-    return write_result;
+    }
   } else {
     return write_error(pid, "unsupported_format");
   }
 }
 
+int identify(uint8_t *pid, uint8_t from, uint8_t *buf, size_t size)
+{
+  size_t height, width;
+  if (is_known(from)) {
+    if (check_header(from, buf, size, &width, &height)) {
+      uint32_t data[2];
+      data[0] = htonl(width);
+      data[1] = htonl(height);
+      return write_data(pid, (uint8_t *) data, 8);
+    } else
+      return write_error(pid, "decode_failure");
+  } else
+    return write_error(pid, "unsupported_format");
+}
+
 void loop(void)
 {
   uint32_t tag;
-  size_t size, pid_size;
-  int result;
+  uint8_t *buf, *payload;
+  size_t size, pid_size, payload_size;
+  int result, command;
 
   do {
     result = 0;
     if (read_buf(&tag, 4) == 4) {
       size = ntohl(tag);
       if (size > 0) {
-	uint8_t *buf = malloc(size);
+	buf = malloc(size);
 	if (buf) {
 	  if (read_buf(buf, size) == size) {
 	    pid_size = buf[0];
-	    if (size >= pid_size + 3) {
-	      result = convert(buf, buf[pid_size + 1], buf[pid_size + 2],
-			       buf+pid_size+3, size-pid_size-3);
+	    if (size >= pid_size + 2) {
+	      command = buf[pid_size + 1];
+	      payload = buf + pid_size + 2;
+	      payload_size = size - (pid_size + 2);
+	      switch (command) {
+	      case CMD_CONVERT:
+		if (payload_size >= 2)
+		  result = convert(buf, payload[0], payload[1],
+				   payload+2, payload_size-2);
+		break;
+	      case CMD_IDENTIFY:
+		if (payload_size >= 1)
+		  result = identify(buf, payload[0], payload+1, payload_size-1);
+		break;
+	      default:
+		result = 0;
+	      }
 	    }
 	  }
 	}

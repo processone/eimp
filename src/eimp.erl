@@ -18,16 +18,23 @@
 -module(eimp).
 
 %% API
--export([start/0, stop/0, convert/2, format_error/1, get_type/1]).
+-export([start/0, stop/0, convert/2, identify/1, format_error/1, get_type/1]).
 
 -type img_type() :: png | jpeg | webp.
 -type error_reason() :: unsupported_format |
 			timeout |
 			disconnected |
 			encode_failure |
-			decode_failure.
+			decode_failure |
+			image_too_big.
+-type info() :: [{type, img_type()} |
+		 {width, non_neg_integer()} |
+		 {height, non_neg_integer()}].
 
--export_type([img_type/0, error_reason/0]).
+-export_type([img_type/0, error_reason/0, info/0]).
+
+-define(CMD_CONVERT, 1).
+-define(CMD_IDENTIFY, 2).
 
 %%%===================================================================
 %%% API
@@ -46,14 +53,21 @@ convert(Data, To) ->
 	    {error, unsupported_format};
 	Type ->
 	    FromCode = code(Type),
-	    Cmd = <<FromCode, ToCode, Data/binary>>,
-	    case eimp_worker:call(Cmd) of
-		{ok, <<ResCode, Reply/binary>>} ->
-		    if ResCode == $0 ->
-			    {ok, Reply};
-		       true ->
-			    {error, erlang:binary_to_atom(Reply, latin1)}
-		    end;
+	    Cmd = <<?CMD_CONVERT, FromCode, ToCode, Data/binary>>,
+	    call(Cmd)
+    end.
+
+-spec identify(binary()) -> {ok, info()} | {error, error_reason()}.
+identify(Data) ->
+    case get_type(Data) of
+	uknown ->
+	    {error, unsupported_format};
+	Type ->
+	    FromCode = code(Type),
+	    Cmd = <<?CMD_IDENTIFY, FromCode, Data/binary>>,
+	    case call(Cmd) of
+		{ok, <<W:32, H:32>>} ->
+		    {ok, [{type, Type}, {width, W}, {height, H}]};
 		{error, _} = Err ->
 		    Err
 	    end
@@ -69,7 +83,9 @@ format_error(decode_failure) ->
 format_error(timeout) ->
     <<"Timeout">>;
 format_error(disconnected) ->
-    <<"Failed to connect to external eimp process">>.
+    <<"Failed to connect to external eimp process">>;
+format_error(image_too_big) ->
+    <<"Image is too big">>.
 
 %%%===================================================================
 %%% Internal functions
@@ -88,3 +104,15 @@ get_type(_) ->
 code(png) -> $p;
 code(jpeg) -> $j;
 code(webp) -> $w.
+
+call(Cmd) ->
+    case eimp_worker:call(Cmd) of
+	{ok, <<ResCode, Reply/binary>>} ->
+	    if ResCode == $0 ->
+		    {ok, Reply};
+	       true ->
+		    {error, erlang:binary_to_atom(Reply, latin1)}
+	    end;
+	{error, _} = Err ->
+	    Err
+    end.

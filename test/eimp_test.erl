@@ -57,6 +57,21 @@ malformed_jpeg_test() ->
 malformed_webp_test() ->
     convert_malformed(webp).
 
+webp_identify_test() ->
+    identify(webp, 1024, 772).
+
+jpeg_identify_test() ->
+    identify(jpeg, 1024, 772).
+
+png_identify_test() ->
+    identify(png, 1024, 772).
+
+too_big_test() ->
+    FileName = "spark.png.zip",
+    Path = filename:join(test_dir(), FileName),
+    {ok, [{_, Data}]} = zip:unzip(Path, [memory]),
+    ?assertEqual({error, image_too_big}, eimp:convert(Data, jpeg)).
+
 timeout_test() ->
     ?assertEqual({error, timeout}, eimp_worker:call(<<>>, 0)).
 
@@ -96,3 +111,10 @@ convert_malformed(From) ->
     Path = filename:join(test_dir(), FileName),
     {ok, <<In:1024/binary, _/binary>>} = file:read_file(Path),
     ?assertEqual({error, decode_failure}, eimp:convert(In, png)).
+
+identify(From, W, H) ->
+    FileName = "img." ++ atom_to_list(From),
+    Path = filename:join(test_dir(), FileName),
+    {ok, In} = file:read_file(Path),
+    ?assertEqual({ok, [{type, From}, {width, W}, {height, H}]},
+		 eimp:identify(In)).
