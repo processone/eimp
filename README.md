@@ -85,7 +85,10 @@ The function returns information about image `Img`, where `Info` is represented 
  {width, Width :: non_neg_integer()},
  {height, Height :: non_neg_integer()}]
 ```
-It is safe to assume that `Info` contains all these properties.
+It is safe to assume that `Info` always contains all these properties.
+**NOTE**: If you only need to get a type of an image, you're better off using
+`get_type/1` function, because it doesn't involve interaction with `eimp` process
+and is, thus, much faster.
 
 ### format_error/1
 ```erl
