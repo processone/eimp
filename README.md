@@ -2,7 +2,7 @@ Erlang Image Manipulation Process
 =================================
 
 `eimp` is an Erlang/Elixir application for manipulating graphic images using
-external C libraries. Currently it supports convertation between WebP, JPEG and PNG.
+external C libraries. Currently it supports convertation between WebP, JPEG, PNG and GIF.
 
 # Requirements
 
@@ -53,8 +53,8 @@ Current API is simple and supports only a few functions:
 
 ### convert/2
 ```erl
--spec convert(In :: binary(), Format :: png|jpeg|webp) -> {ok, Out :: binary()} |
-                                                          {error, Reason :: error_reason()}.
+-spec convert(In :: binary(), Format :: png|jpeg|webp|gif) -> {ok, Out :: binary()} |
+                                                              {error, Reason :: error_reason()}.
 ```
 
 Shorthand for `convert(In, Format, 30000)` (that is, the default timeout is
@@ -62,7 +62,7 @@ Shorthand for `convert(In, Format, 30000)` (that is, the default timeout is
 
 ### convert/3
 ```erl
--spec convert(In :: binary(), Format :: png|jpeg|webp, Timeout :: non_neg_integer()) ->
+-spec convert(In :: binary(), Format :: png|jpeg|webp|gif, Timeout :: non_neg_integer()) ->
                    {ok, Out :: binary()} |
                    {error, Reason :: error_reason()}.
 ```
@@ -109,6 +109,6 @@ The `Reason` can have the following values:
 
 ### get_type/1
 ```erl
--spec get_type(Data :: binary()) -> png | jpeg | webp | unknown.
+-spec get_type(Data :: binary()) -> png | jpeg | webp | gif | unknown.
 ```
 Detects image format of `Data`.

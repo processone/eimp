@@ -20,7 +20,7 @@
 %% API
 -export([start/0, stop/0, convert/2, identify/1, format_error/1, get_type/1]).
 
--type img_type() :: png | jpeg | webp.
+-type img_type() :: png | jpeg | webp | gif.
 -type error_reason() :: unsupported_format |
 			timeout |
 			disconnected |
@@ -97,13 +97,16 @@ get_type(<<255, X, _/binary>>) when X /= 0 andalso X /= 255 ->
     jpeg;
 get_type(<<"RIFF", _:32, "WEBP", _/binary>>) ->
     webp;
+get_type(<<"GIF8", X, "a", _/binary>>) when X == $7; X == $9 ->
+    gif;
 get_type(_) ->
     unknown.
 
 -spec code(img_type()) -> char().
 code(png) -> $p;
 code(jpeg) -> $j;
-code(webp) -> $w.
+code(webp) -> $w;
+code(gif) -> $g.
 
 call(Cmd) ->
     case eimp_worker:call(Cmd) of

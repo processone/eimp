@@ -32,12 +32,19 @@
 #define PNG 'p'
 #define JPEG 'j'
 #define WEBP 'w'
+#define GIF 'g'
 #define CMD_CONVERT 1
 #define CMD_IDENTIFY 2
 
+uint16_t __le16toh(uint16_t x)
+{
+  uint16_t big_endian = (x >> 8) | (x << 8);
+  return ntohs(big_endian);
+}
+
 int is_known(char format)
 {
-  return format == PNG || format == JPEG || format == WEBP;
+  return format == PNG || format == JPEG || format == WEBP || format == GIF;
 }
 
 /*
@@ -118,6 +125,25 @@ int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
   return ret;
 }
 
+int check_gif_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
+{
+  uint16_t w, h;
+  if (size >= 10) {
+    if (memcmp(buf, "GIF8", 4) == 0) {
+      if (buf[4] == '7' || buf[4] == '9') {
+	if (buf[5] == 'a') {
+	  memcpy(&w, buf+6, 2);
+	  memcpy(&h, buf+8, 2);
+	  *width = __le16toh(w);
+	  *height = __le16toh(h);
+	  return 1;
+	}
+      }
+    }
+  }
+  return 0;
+}
+
 int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   switch (format) {
@@ -127,6 +153,8 @@ int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_
     return check_jpeg_header(buf, size, width, height);
   case WEBP:
     return check_webp_header(buf, size, width, height);
+  case GIF:
+    return check_gif_header(buf, size, width, height);
   default:
     return 0;
   }
@@ -141,6 +169,8 @@ gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
     return gdImageCreateFromPngPtr(size, buf);
   case JPEG:
     return gdImageCreateFromJpegPtr(size, buf);
+  case GIF:
+    return gdImageCreateFromGifPtr(size, buf);
   default:
     return NULL;
   }
@@ -155,6 +185,8 @@ void *encode(uint8_t format, gdImagePtr im, int *size)
     return gdImagePngPtr(im, size);
   case JPEG:
     return gdImageJpegPtr(im, size, -1);
+  case GIF:
+    return gdImageGifPtr(im, size);
   default:
     return NULL;
   }

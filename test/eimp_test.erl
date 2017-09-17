@@ -32,17 +32,40 @@ png_to_jpeg_test() ->
 png_to_webp_test() ->
     convert(png, webp).
 
+png_to_gif_test() ->
+    convert(png, gif).
+
 jpeg_to_png_test() ->
     convert(jpeg, png).
 
 jpeg_to_webp_test() ->
     convert(jpeg, webp).
 
+jpeg_to_gif_test() ->
+    convert(jpeg, gif).
+
 webp_to_png_test() ->
     convert(webp, png).
 
 webp_to_jpeg_test() ->
     convert(webp, jpeg).
+
+webp_to_gif_test() ->
+    convert(webp, gif).
+
+gif_to_png_test() ->
+    convert(gif, png).
+
+gif_to_jpeg_test() ->
+    convert(gif, jpeg).
+
+%% GIF->WEBP is not supported by libgd, I have no idea why
+%% Use this as encode failure check
+encode_failure_test() ->
+    FileName = "img.gif",
+    Path = filename:join(test_dir(), FileName),
+    {ok, In} = file:read_file(Path),
+    ?assertEqual({error, encode_failure}, eimp:convert(In, webp)).
 
 unsupported_format_test() ->
     ?assertEqual({error, unsupported_format},
@@ -57,6 +80,9 @@ malformed_jpeg_test() ->
 malformed_webp_test() ->
     convert_malformed(webp).
 
+malformed_gif_test() ->
+    convert_malformed(gif).
+
 webp_identify_test() ->
     identify(webp, 1024, 772).
 
@@ -65,6 +91,9 @@ jpeg_identify_test() ->
 
 png_identify_test() ->
     identify(png, 1024, 772).
+
+gif_identify_test() ->
+    identify(gif, 1024, 772).
 
 too_big_test() ->
     FileName = "spark.png.zip",
@@ -109,7 +138,7 @@ convert(From, To) ->
 convert_malformed(From) ->
     FileName = "img." ++ atom_to_list(From),
     Path = filename:join(test_dir(), FileName),
-    {ok, <<In:1024/binary, _/binary>>} = file:read_file(Path),
+    {ok, <<In:100/binary, _/binary>>} = file:read_file(Path),
     ?assertEqual({error, decode_failure}, eimp:convert(In, png)).
 
 identify(From, W, H) ->
