@@ -113,6 +113,7 @@ format_error_test() ->
 	      ?assertMatch(<<_/binary>>, eimp:format_error(Reason))
       end,
       [unsupported_format,
+       image_too_big,
        timeout,
        disconnected,
        encode_failure,
