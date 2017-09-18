@@ -36,6 +36,13 @@
 #define CMD_CONVERT 1
 #define CMD_IDENTIFY 2
 
+typedef struct transform {
+  uint8_t from;
+  uint8_t to;
+  uint16_t scale_width;
+  uint16_t scale_height;
+} transform_s;
+
 uint16_t __le16toh(uint16_t x)
 {
   uint16_t big_endian = (x >> 8) | (x << 8);
@@ -256,19 +263,38 @@ int write_error(uint8_t *pid, char *s)
   return 0;
 }
 
-int convert(uint8_t *pid, uint8_t from, uint8_t to, uint8_t *ibuf, size_t isize)
+gdImagePtr transform(gdImagePtr in, transform_s *t)
 {
-  gdImagePtr im;
+  gdImagePtr out;
+
+  if (t->scale_width > 0 && t->scale_height > 0) {
+    out = gdImageScale(in, t->scale_width, t->scale_height);
+    gdImageDestroy(in);
+    return out;
+  } else {
+    return in;
+  }
+}
+
+int convert(uint8_t *pid, transform_s *t, uint8_t *ibuf, size_t isize)
+{
+  gdImagePtr im_orig, im;
   int osize, write_result;
   size_t width, height;
+  uint8_t from = t->from;
+  uint8_t to = t->to;
 
   if (is_known(from) && is_known(to)) {
     if (check_header(from, ibuf, isize, &width, &height)) {
       if (width * height < MAX_RESOLUTION) {
-	im = decode(from, ibuf, isize);
-	if (!im)
+	im_orig = decode(from, ibuf, isize);
+	if (!im_orig)
 	  return write_error(pid, "decode_failure");
-	
+
+	im = transform(im_orig, t);
+	if (!im)
+	  return write_error(pid, "transform_failure");
+
 	uint8_t *obuf = encode(to, im, &osize);
 	gdImageDestroy(im);
 	if (!obuf)
@@ -303,6 +329,21 @@ int identify(uint8_t *pid, uint8_t from, uint8_t *buf, size_t size)
     return write_error(pid, "unsupported_format");
 }
 
+int parse_transform(uint8_t *buf, size_t size, transform_s *t)
+{
+  uint16_t w, h;
+  if (size >= 6) {
+    memcpy(&w, buf+2, 2);
+    memcpy(&h, buf+4, 2);
+    t->from = buf[0];
+    t->to = buf[1];
+    t->scale_width = ntohs(w);
+    t->scale_height = ntohs(h);
+    return 6;
+  }
+  return 0;
+}
+
 /*
   The data accepted/produced by the port has always the following format
 
@@ -334,8 +375,9 @@ void loop(void)
 {
   uint32_t tag;
   uint8_t *buf, *payload;
-  size_t size, pid_size, payload_size;
+  size_t size, pid_size, payload_size, next;
   int result, command;
+  transform_s t;
 
   do {
     result = 0;
@@ -352,9 +394,9 @@ void loop(void)
 	      payload_size = size - (pid_size + 2);
 	      switch (command) {
 	      case CMD_CONVERT:
-		if (payload_size >= 2)
-		  result = convert(buf, payload[0], payload[1],
-				   payload+2, payload_size-2);
+		next = parse_transform(payload, payload_size, &t);
+		if (next && (payload_size >= next))
+		  result = convert(buf, &t, payload + next, payload_size - next);
 		break;
 	      case CMD_IDENTIFY:
 		if (payload_size >= 1)

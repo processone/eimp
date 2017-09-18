@@ -62,10 +62,20 @@ gif_to_jpeg_test() ->
 %% GIF->WEBP is not supported by libgd, I have no idea why
 %% Use this as encode failure check
 encode_failure_test() ->
-    FileName = "img.gif",
-    Path = filename:join(test_dir(), FileName),
-    {ok, In} = file:read_file(Path),
+    In = read(gif),
     ?assertEqual({error, encode_failure}, eimp:convert(In, webp)).
+
+scale_png_test() ->
+    scale(png).
+
+scale_jpeg_test() ->
+    scale(jpeg).
+
+scale_gif_test() ->
+    scale(gif).
+
+scale_webp_test() ->
+    scale(webp).
 
 unsupported_format_test() ->
     ?assertEqual({error, unsupported_format},
@@ -130,21 +140,27 @@ disconnected_test() ->
     ?assertEqual({error, disconnected}, eimp_worker:call(<<>>)).
 
 convert(From, To) ->
-    FileName = "img." ++ atom_to_list(From),
-    Path = filename:join(test_dir(), FileName),
-    {ok, In} = file:read_file(Path),
+    In = read(From),
     {ok, Out} = eimp:convert(In, To),
     ?assertEqual(To, eimp:get_type(Out)).
 
 convert_malformed(From) ->
-    FileName = "img." ++ atom_to_list(From),
-    Path = filename:join(test_dir(), FileName),
-    {ok, <<In:100/binary, _/binary>>} = file:read_file(Path),
+    <<In:100/binary, _/binary>> = read(From),
     ?assertEqual({error, decode_failure}, eimp:convert(In, png)).
 
 identify(From, W, H) ->
-    FileName = "img." ++ atom_to_list(From),
-    Path = filename:join(test_dir(), FileName),
-    {ok, In} = file:read_file(Path),
+    In = read(From),
     ?assertEqual({ok, [{type, From}, {width, W}, {height, H}]},
 		 eimp:identify(In)).
+
+scale(From) ->
+    In = read(From),
+    {ok, Out} = eimp:convert(In, From, [{scale, {512, 386}}]),
+    ?assertEqual({ok, [{type, From}, {width, 512}, {height, 386}]},
+		 eimp:identify(Out)).
+
+read(Format) ->
+    FileName = "img." ++ atom_to_list(Format),
+    Path = filename:join(test_dir(), FileName),
+    {ok, Data} = file:read_file(Path),
+    Data.

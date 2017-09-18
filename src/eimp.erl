@@ -18,7 +18,7 @@
 -module(eimp).
 
 %% API
--export([start/0, stop/0, convert/2, identify/1, format_error/1, get_type/1]).
+-export([start/0, stop/0, convert/2, convert/3, identify/1, format_error/1, get_type/1]).
 
 -type img_type() :: png | jpeg | webp | gif.
 -type error_reason() :: unsupported_format |
@@ -26,10 +26,14 @@
 			disconnected |
 			encode_failure |
 			decode_failure |
+			transform_failure |
 			image_too_big.
 -type info() :: [{type, img_type()} |
 		 {width, non_neg_integer()} |
 		 {height, non_neg_integer()}].
+-type width() :: non_neg_integer().
+-type height() :: non_neg_integer().
+-type convert_opts() :: [{scale, {width(), height()}}].
 
 -export_type([img_type/0, error_reason/0, info/0]).
 
@@ -47,13 +51,19 @@ stop() ->
 
 -spec convert(binary(), img_type()) -> {ok, binary()} | {error, error_reason()}.
 convert(Data, To) ->
+    convert(Data, To, []).
+
+-spec convert(binary(), img_type(), convert_opts()) ->
+		     {ok, binary()} | {error, error_reason()}.
+convert(Data, To, Opts) ->
     ToCode = code(To),
     case get_type(Data) of
 	unknown ->
 	    {error, unsupported_format};
 	Type ->
+	    EncOpts = encode_options(Opts),
 	    FromCode = code(Type),
-	    Cmd = <<?CMD_CONVERT, FromCode, ToCode, Data/binary>>,
+	    Cmd = <<?CMD_CONVERT, FromCode, ToCode, EncOpts/binary, Data/binary>>,
 	    call(Cmd)
     end.
 
@@ -80,6 +90,8 @@ format_error(encode_failure) ->
     <<"Encoding error">>;
 format_error(decode_failure) ->
     <<"Decoding error">>;
+format_error(transform_failure) ->
+    <<"Transformation error">>;
 format_error(timeout) ->
     <<"Timeout">>;
 format_error(disconnected) ->
@@ -119,3 +131,14 @@ call(Cmd) ->
 	{error, _} = Err ->
 	    Err
     end.
+
+encode_options(Opts) ->
+    {ScaleW, ScaleH} = case lists:keyfind(scale, 1, Opts) of
+			   {scale, {W, H}} when W >= 0, H >= 0 ->
+			       {W, H};
+			   false ->
+			       {0, 0};
+			   _ ->
+			       erlang:error(badarg)
+		       end,
+    <<ScaleW:16, ScaleH:16>>.
