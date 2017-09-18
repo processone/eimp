@@ -2,7 +2,7 @@ Erlang Image Manipulation Process
 =================================
 
 `eimp` is an Erlang/Elixir application for manipulating graphic images using
-external C libraries. Currently it supports convertation between WebP, JPEG, PNG and GIF.
+external C libraries. It supports WebP, JPEG, PNG and GIF.
 
 # Requirements
 
@@ -57,12 +57,11 @@ Current API is simple and supports only a few functions:
                                                               {error, Reason :: error_reason()}.
 ```
 
-Shorthand for `convert(In, Format, 30000)` (that is, the default timeout is
-30 seconds).
+Shorthand for `convert(In, Format, [])`.
 
 ### convert/3
 ```erl
--spec convert(In :: binary(), Format :: png|jpeg|webp|gif, Timeout :: non_neg_integer()) ->
+-spec convert(In :: binary(), Format :: png|jpeg|webp|gif, Options :: convert_opts()) ->
                    {ok, Out :: binary()} |
                    {error, Reason :: error_reason()}.
 ```
@@ -70,8 +69,9 @@ The function converts incoming data `In` into format `Format`. Note that you don
 have to pass the format of incoming data, becasue it will be detected automatically
 using `get_type/1` function. In the case of an error you can use `Reason` to produce
 a human-readable diagnostic text using `format_error/1`.
-The `Timeout` should be provided in _milliseconds_. Also note, that you cannot
-use `infinity` or `unlimited` as a value for `Timeout`.
+The function also accepts a proplist of `Options`. Currently available options are:
+- `{scale, {Width, Height}}`: scales image to the new `Width` and `Height`.
+  No scaling is applied by default.
 
 **WARNING**: the maximum resolution of an incoming image is hardcoded to be 25Mpx.
 This is a protection against decompression bombs.
@@ -104,6 +104,7 @@ The `Reason` can have the following values:
                         disconnected |
                         encode_failure |
                         decode_failure |
+			transform_failure |
 			image_too_big.
 ```
 
