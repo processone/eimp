@@ -70,7 +70,7 @@ convert(Data, To, Opts) ->
 -spec identify(binary()) -> {ok, info()} | {error, error_reason()}.
 identify(Data) ->
     case get_type(Data) of
-	uknown ->
+	unknown ->
 	    {error, unsupported_format};
 	Type ->
 	    FromCode = code(Type),
