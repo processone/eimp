@@ -51,7 +51,11 @@ uint16_t __le16toh(uint16_t x)
 
 int is_known(char format)
 {
-  return format == PNG || format == JPEG || format == WEBP || format == GIF;
+  return format == PNG || format == JPEG ||
+#ifdef HAVE_WEBP
+ format == WEBP ||
+#endif
+ format == GIF;
 }
 
 /*
@@ -158,8 +162,10 @@ int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_
     return check_png_header(buf, size, width, height);
   case JPEG:
     return check_jpeg_header(buf, size, width, height);
+#ifdef HAVE_WEBP
   case WEBP:
     return check_webp_header(buf, size, width, height);
+#endif
   case GIF:
     return check_gif_header(buf, size, width, height);
   default:
@@ -170,8 +176,10 @@ int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_
 gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
 {
   switch (format) {
+#ifdef HAVE_WEBP
   case WEBP:
     return gdImageCreateFromWebpPtr(size, buf);
+#endif
   case PNG:
     return gdImageCreateFromPngPtr(size, buf);
   case JPEG:
@@ -186,8 +194,10 @@ gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
 void *encode(uint8_t format, gdImagePtr im, int *size)
 {
   switch (format) {
+#ifdef HAVE_WEBP
   case WEBP:
     return gdImageWebpPtr(im, size);
+#endif
   case PNG:
     return gdImagePngPtr(im, size);
   case JPEG:

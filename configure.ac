@@ -39,8 +39,8 @@ AC_CHECK_HEADERS([webp/decode.h], [], [
 
 AC_SEARCH_LIBS([gdImageCreate], [gd], [], [
     AC_MSG_ERROR([libgd library was not found])])
-AC_SEARCH_LIBS([gdImageCreateFromWebpPtr, gdImageWebpPtr], [gd], [], [
-    AC_MSG_ERROR([libgd library is not compiled with WebP support])])
+AC_SEARCH_LIBS([gdImageCreateFromWebpPtr, gdImageWebpPtr], [gd], [AC_DEFINE(HAVE_WEBP, 1, [Define if we have WebP enabled gd])], [
+    AC_MSG_WARN([libgd library is not compiled with WebP support])])
 AC_SEARCH_LIBS([gdImageCreateFromPngPtr, gdImagePngPtr], [gd], [], [
     AC_MSG_ERROR([libgd library is not compiled with PNG support])])
 AC_SEARCH_LIBS([gdImageCreateFromJpegPtr, gdImageJpegPtr], [gd], [], [
