@@ -1,4 +1,4 @@
-{cflags, "@CFLAGS@"}.
+{cflags, "@CFLAGS@ @webp@"}.
 {ldflags, "@LDFLAGS@ @LIBS@ -lpthread"}.
 {with_gcov, "@gcov@"}.
 

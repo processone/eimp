@@ -619,6 +619,7 @@ ac_includes_default="\
 #endif"
 
 ac_subst_vars='LTLIBOBJS
+webp
 gcov
 ERLCFLAGS
 ERLC
@@ -3913,10 +3914,11 @@ $as_echo "$ac_cv_search_gdImageCreateFromWebpPtr__gdImageWebpPtr" >&6; }
 ac_res=$ac_cv_search_gdImageCreateFromWebpPtr__gdImageWebpPtr
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
-
+  webp=-DHAVE_WEBP
 else
 
-    as_fn_error $? "libgd library is not compiled with WebP support" "$LINENO" 5
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libgd library is not compiled with WebP support" >&5
+$as_echo "$as_me: WARNING: libgd library is not compiled with WebP support" >&2;}
 fi
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gdImageCreateFromPngPtr, gdImagePngPtr" >&5
@@ -4225,6 +4227,7 @@ esac
 else
   gcov=false
 fi
+
 
 
 

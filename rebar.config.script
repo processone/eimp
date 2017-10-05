@@ -25,7 +25,7 @@ Cfg = case file:consult(filename:join([filename:dirname(SCRIPT),"vars.config"]))
               Terms;
           _Err ->
               []
-      end ++ [{cflags, "-g -O2 -Wall"},
+      end ++ [{cflags, "-g -O2 -Wall -DHAVE_WEBP"},
 	      {ldflags, "-lwebp -lpng -ljpeg -lgd  -lpthread"},
 	      {with_gcov, "false"}],
 {cflags, CfgCFlags} = lists:keyfind(cflags, 1, Cfg),
