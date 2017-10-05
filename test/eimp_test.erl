@@ -77,9 +77,13 @@ scale_gif_test() ->
 scale_webp_test() ->
     scale(webp).
 
-unsupported_format_test() ->
+convert_unsupported_test() ->
     ?assertEqual({error, unsupported_format},
 		 eimp:convert(<<1,2,3>>, png)).
+
+identify_unsupported_test() ->
+    ?assertEqual({error, unsupported_format},
+		 eimp:identify(<<1,2,3>>)).
 
 malformed_png_test() ->
     convert_malformed(png).
@@ -126,6 +130,7 @@ format_error_test() ->
        image_too_big,
        timeout,
        disconnected,
+       transform_failure,
        encode_failure,
        decode_failure]).
 
