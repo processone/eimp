@@ -25,7 +25,8 @@
   {env,          []},
 
   %% hex.pm packaging:
-  {files, ["src/", "include/", "c_src/eimp.c", "rebar.config"]},
+  {files, ["src/", "include/", "c_src/eimp.c", "rebar.config",
+           "README.md", "LICENSE.txt"]},
   {licenses, ["Apache 2.0"]},
   {maintainers, ["ProcessOne"]},
   {links, [{"Github", "https://github.com/processone/erlang-convert"}]}]}.
