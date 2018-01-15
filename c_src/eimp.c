@@ -22,10 +22,18 @@
 #include <ei.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#ifdef HAVE_GD
 #include "gd.h"
+#endif
+#ifdef HAVE_JPEG
 #include "jpeglib.h"
+#endif
+#ifdef HAVE_PNG
 #include "png.h"
+#endif
+#ifdef HAVE_WEBP
 #include "webp/decode.h"
+#endif
 
 /* Maximum resolution is 25Mpx */
 #define MAX_RESOLUTION 25000000
@@ -51,17 +59,28 @@ uint16_t __le16toh(uint16_t x)
 
 int is_known(char format)
 {
-  return format == PNG || format == JPEG ||
-#ifdef HAVE_WEBP
- format == WEBP ||
+  switch (format) {
+#ifdef HAVE_PNG
+  case PNG: return 1;
 #endif
- format == GIF;
+#ifdef HAVE_JPEG
+  case JPEG: return 1;
+#endif
+#ifdef HAVE_WEBP
+  case WEBP: return 1;
+#endif
+#ifdef HAVE_GD
+  case GIF: return 1;
+#endif
+  default: return 0;
+  }
 }
 
 /*
   The following unbelievable crap is needed to support
   retarded errors processing mechanism in libjpeg
 */
+#ifdef HAVE_JPEG
 struct eimp_jpeg_error_mgr {
   struct jpeg_error_mgr pub;
   jmp_buf setjmp_buffer;
@@ -98,8 +117,10 @@ int check_jpeg_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
   jpeg_destroy_decompress(&cinfo);
   return ret;
 }
+#endif
 /* End of retardation */
 
+#ifdef HAVE_WEBP
 int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   int w, h;
@@ -111,7 +132,9 @@ int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 
   return 0;
 }
+#endif
 
+#ifdef HAVE_PNG
 int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   uint32_t w, h;
@@ -135,6 +158,7 @@ int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
   }
   return ret;
 }
+#endif
 
 int check_gif_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
@@ -158,10 +182,14 @@ int check_gif_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   switch (format) {
+#ifdef HAVE_PNG
   case PNG:
     return check_png_header(buf, size, width, height);
+#endif
+#ifdef HAVE_JPEG
   case JPEG:
     return check_jpeg_header(buf, size, width, height);
+#endif
 #ifdef HAVE_WEBP
   case WEBP:
     return check_webp_header(buf, size, width, height);
@@ -170,42 +198,6 @@ int check_header(uint8_t format, uint8_t *buf, size_t size, size_t *width, size_
     return check_gif_header(buf, size, width, height);
   default:
     return 0;
-  }
-}
-
-gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
-{
-  switch (format) {
-#ifdef HAVE_WEBP
-  case WEBP:
-    return gdImageCreateFromWebpPtr(size, buf);
-#endif
-  case PNG:
-    return gdImageCreateFromPngPtr(size, buf);
-  case JPEG:
-    return gdImageCreateFromJpegPtr(size, buf);
-  case GIF:
-    return gdImageCreateFromGifPtr(size, buf);
-  default:
-    return NULL;
-  }
-}
-
-void *encode(uint8_t format, gdImagePtr im, int *size)
-{
-  switch (format) {
-#ifdef HAVE_WEBP
-  case WEBP:
-    return gdImageWebpPtr(im, size);
-#endif
-  case PNG:
-    return gdImagePngPtr(im, size);
-  case JPEG:
-    return gdImageJpegPtr(im, size, -1);
-  case GIF:
-    return gdImageGifPtr(im, size);
-  default:
-    return NULL;
   }
 }
 
@@ -273,6 +265,52 @@ int write_error(uint8_t *pid, char *s)
   return 0;
 }
 
+#ifdef HAVE_GD
+
+gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
+{
+  switch (format) {
+#ifdef HAVE_WEBP
+  case WEBP:
+    return gdImageCreateFromWebpPtr(size, buf);
+#endif
+#ifdef HAVE_PNG
+  case PNG:
+    return gdImageCreateFromPngPtr(size, buf);
+#endif
+#ifdef HAVE_JPEG
+  case JPEG:
+    return gdImageCreateFromJpegPtr(size, buf);
+#endif
+  case GIF:
+    return gdImageCreateFromGifPtr(size, buf);
+  default:
+    return NULL;
+  }
+}
+
+void *encode(uint8_t format, gdImagePtr im, int *size)
+{
+  switch (format) {
+#ifdef HAVE_WEBP
+  case WEBP:
+    return gdImageWebpPtr(im, size);
+#endif
+#ifdef HAVE_PNG
+  case PNG:
+    return gdImagePngPtr(im, size);
+#endif
+#ifdef HAVE_JPEG
+  case JPEG:
+    return gdImageJpegPtr(im, size, -1);
+#endif
+  case GIF:
+    return gdImageGifPtr(im, size);
+  default:
+    return NULL;
+  }
+}
+
 gdImagePtr transform(gdImagePtr in, transform_s *t)
 {
   gdImagePtr out;
@@ -323,6 +361,13 @@ int convert(uint8_t *pid, transform_s *t, uint8_t *ibuf, size_t isize)
     return write_error(pid, "unsupported_format");
   }
 }
+
+#else
+int convert(uint8_t *pid, transform_s *t, uint8_t *ibuf, size_t isize)
+{
+  return write_error(pid, "unsupported_format");
+}
+#endif
 
 int identify(uint8_t *pid, uint8_t from, uint8_t *buf, size_t size)
 {

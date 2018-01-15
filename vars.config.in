@@ -1,6 +1,10 @@
-{cflags, "@CFLAGS@ @webp@"}.
+{cflags, "@CFLAGS@ @webp@ @gd@ @jpeg@ @png@"}.
 {ldflags, "@LDFLAGS@ @LIBS@ -lpthread"}.
 {with_gcov, "@gcov@"}.
+{gd, "@gd@"}.
+{webp, "@webp@"}.
+{jpeg, "@jpeg@"}.
+{png, "@png@"}.
 
 %% Local Variables:
 %% mode: erlang

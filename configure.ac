@@ -28,29 +28,33 @@ AC_ERLANG_NEED_ERLC
 # AC_ERLANG_SUBST_ROOT_DIR
 # AC_ERLANG_SUBST_LIB_DIR
 
-AC_CHECK_HEADERS([gd.h], [], [
-    AC_MSG_ERROR([libgd header file gd.h was not found])])
-AC_CHECK_HEADERS([jpeglib.h], [], [
-    AC_MSG_ERROR([libjpeg header file jpeglib.h was not found])])
-AC_CHECK_HEADERS([png.h], [], [
-    AC_MSG_ERROR([libnpg header file png.h was not found])])
-AC_CHECK_HEADERS([webp/decode.h], [], [
-    AC_MSG_ERROR([libwebp header file webp/decode.h was not found])])
+AC_CHECK_HEADERS([gd.h], [
 
-AC_SEARCH_LIBS([gdImageCreate], [gd], [], [
-    AC_MSG_ERROR([libgd library was not found])])
-AC_SEARCH_LIBS([gdImageCreateFromWebpPtr, gdImageWebpPtr], [gd], [webp=-DHAVE_WEBP], [
-    AC_MSG_WARN([libgd library is not compiled with WebP support])])
-AC_SEARCH_LIBS([gdImageCreateFromPngPtr, gdImagePngPtr], [gd], [], [
-    AC_MSG_ERROR([libgd library is not compiled with PNG support])])
-AC_SEARCH_LIBS([gdImageCreateFromJpegPtr, gdImageJpegPtr], [gd], [], [
-    AC_MSG_ERROR([libgd library is not compiled with JPEG support])])
-AC_SEARCH_LIBS([jpeg_read_header], [jpeg], [], [
-    AC_MSG_ERROR([libjpeg library was not found])])
-AC_SEARCH_LIBS([png_sig_cmp], [png], [], [
-    AC_MSG_ERROR([libpng library was not found])])
-AC_SEARCH_LIBS([WebPGetInfo], [webp], [], [
-    AC_MSG_ERROR([libwebp library was not found])])
+  AC_SEARCH_LIBS([gdImageCreate], [gd], [
+    gd=-DHAVE_GD
+    AC_CHECK_HEADERS([jpeglib.h], [
+      AC_SEARCH_LIBS([gdImageCreateFromJpegPtr, gdImageJpegPtr], [gd], [
+        AC_SEARCH_LIBS([jpeg_read_header], [jpeg], [jpeg=-DHAVE_JPEG], [
+          AC_MSG_WARN([libjpeg library was not found])])],
+      [AC_MSG_WARN([libgd library is not compiled with JPEG support])])],
+    [AC_MSG_WARN([libjpeg header file jpeglib.h was not found])])
+
+    AC_CHECK_HEADERS([png.h], [
+      AC_SEARCH_LIBS([gdImageCreateFromPngPtr, gdImagePngPtr], [gd], [
+        AC_SEARCH_LIBS([png_sig_cmp], [png], [png=-DHAVE_PNG], [
+          AC_MSG_WARN([libpng library was not found])])],
+      [AC_MSG_WARN([libgd library is not compiled with PNG support])])],
+    [AC_MSG_WARN([libnpg header file png.h was not found])])
+
+    AC_CHECK_HEADERS([webp/decode.h], [
+      AC_SEARCH_LIBS([gdImageCreateFromWebpPtr, gdImageWebpPtr], [gd], [
+        AC_SEARCH_LIBS([WebPGetInfo], [webp], [webp=-DHAVE_WEBP], [
+          AC_MSG_WARN([libwebp library was not found])])],
+      [AC_MSG_WARN([libgd library is not compiled with WebP support])])],
+    [AC_MSG_WARN([libwebp header file webp/decode.h was not found])])
+  ], [AC_MSG_WARN([libgd header file gd.h was not found])])
+
+], [AC_MSG_WARN([libgd header file gd.h was not found])])
 
 AC_ARG_ENABLE(gcov,
 [AC_HELP_STRING([--enable-gcov], [compile with gcov enabled (default: no)])],
@@ -62,6 +66,9 @@ esac],[gcov=false])
 
 AC_SUBST(gcov)
 AC_SUBST(webp)
+AC_SUBST(gd)
+AC_SUBST(jpeg)
+AC_SUBST(png)
 
 AC_CONFIG_FILES([vars.config])
 

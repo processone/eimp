@@ -47,19 +47,27 @@ call(Data) ->
 -spec call(binary(), non_neg_integer()) ->
 		  {ok, binary()} | {error, eimp:error_reason()}.
 call(Data, Timeout) ->
-    StartTime = p1_time_compat:monotonic_time(milli_seconds),
-    PoolSize = eimp_sup:get_pool_size(),
-    I = p1_time_compat:unique_integer([positive, monotonic]),
-    Tag = term_to_binary(self()),
-    Cmd = <<(size(Tag)), Tag/binary, Data/binary>>,
-    do_call(Cmd, I, I + PoolSize, PoolSize, StartTime + Timeout, StartTime).
+    case eimp:is_gd_compiled() of
+	true ->
+	    StartTime = p1_time_compat:monotonic_time(milli_seconds),
+	    PoolSize = eimp_sup:get_pool_size(),
+	    I = p1_time_compat:unique_integer([positive, monotonic]),
+	    Tag = term_to_binary(self()),
+	    Cmd = <<(size(Tag)), Tag/binary, Data/binary>>,
+	    do_call(Cmd, I, I + PoolSize, PoolSize, StartTime + Timeout, StartTime);
+	false ->
+	    {error, unsupported_format}
+    end.
 
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
 init([I]) ->
     process_flag(trap_exit, true),
-    {Port, OSPid} = start_port(I),
+    {Port, OSPid} = case eimp:is_gd_compiled() of
+			true -> start_port(I);
+			false -> {undefined, undefined}
+		    end,
     {ok, #state{port = Port, os_pid = OSPid, num = I}}.
 
 handle_call(_Request, _From, State) ->

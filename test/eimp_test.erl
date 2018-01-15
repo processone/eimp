@@ -26,6 +26,15 @@ test_dir() ->
 start_test() ->
     ?assertEqual(ok, eimp:start()).
 
+is_supported_test() ->
+    ?assertEqual(true, eimp:is_supported(webp)),
+    ?assertEqual(true, eimp:is_supported(png)),
+    ?assertEqual(true, eimp:is_supported(jpeg)),
+    ?assertEqual(true, eimp:is_supported(gif)).
+
+supported_formats_test() ->
+    ?assertEqual([webp, jpeg, png, gif], eimp:supported_formats()).
+
 png_to_jpeg_test() ->
     convert(png, jpeg).
 
