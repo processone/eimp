@@ -113,3 +113,15 @@ The `Reason` can have the following values:
 -spec get_type(Data :: binary()) -> png | jpeg | webp | gif | unknown.
 ```
 Detects image format of `Data`.
+
+### is_supported/1
+```erl
+-spec is_supported(Format :: atom()) -> boolean.
+```
+Returns `true` if `Format` is known and compiled and `false` otherwise.
+
+### supported_formats/0
+```erl
+-spec supported_formats() -> [png | jpeg | webp | gif].
+```
+Returns a list of all known and compiled formats.
