@@ -27,6 +27,9 @@ $ make
 Note that running the configure script is highly recommended, so you should consider
 adding it in pre-hooks of your rebar configuration.
 
+If no C libraries are found at compile time, the package will still be compiled.
+In this case the only usable function would be [get_type/1](#get_type1).
+
 # Application design
 
 The C code is compiled into external native binary called `eimp`, which is
