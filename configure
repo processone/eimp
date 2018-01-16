@@ -3753,9 +3753,9 @@ if test "x$ac_cv_header_gd_h" = xyes; then :
 _ACEOF
 
 
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gdImageCreate" >&5
-$as_echo_n "checking for library containing gdImageCreate... " >&6; }
-if ${ac_cv_search_gdImageCreate+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing gdImageScale" >&5
+$as_echo_n "checking for library containing gdImageScale... " >&6; }
+if ${ac_cv_search_gdImageScale+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_func_search_save_LIBS=$LIBS
@@ -3768,11 +3768,11 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char gdImageCreate ();
+char gdImageScale ();
 int
 main ()
 {
-return gdImageCreate ();
+return gdImageScale ();
   ;
   return 0;
 }
@@ -3785,25 +3785,25 @@ for ac_lib in '' gd; do
     LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
   fi
   if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_search_gdImageCreate=$ac_res
+  ac_cv_search_gdImageScale=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext
-  if ${ac_cv_search_gdImageCreate+:} false; then :
+  if ${ac_cv_search_gdImageScale+:} false; then :
   break
 fi
 done
-if ${ac_cv_search_gdImageCreate+:} false; then :
+if ${ac_cv_search_gdImageScale+:} false; then :
 
 else
-  ac_cv_search_gdImageCreate=no
+  ac_cv_search_gdImageScale=no
 fi
 rm conftest.$ac_ext
 LIBS=$ac_func_search_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gdImageCreate" >&5
-$as_echo "$ac_cv_search_gdImageCreate" >&6; }
-ac_res=$ac_cv_search_gdImageCreate
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_gdImageScale" >&5
+$as_echo "$ac_cv_search_gdImageScale" >&6; }
+ac_res=$ac_cv_search_gdImageScale
 if test "$ac_res" != no; then :
   test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
 
