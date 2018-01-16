@@ -30,7 +30,7 @@ AC_ERLANG_NEED_ERLC
 
 AC_CHECK_HEADERS([gd.h], [
 
-  AC_SEARCH_LIBS([gdImageCreate], [gd], [
+  AC_SEARCH_LIBS([gdImageScale], [gd], [
     gd=-DHAVE_GD
     AC_CHECK_HEADERS([jpeglib.h], [
       AC_SEARCH_LIBS([gdImageCreateFromJpegPtr, gdImageJpegPtr], [gd], [
