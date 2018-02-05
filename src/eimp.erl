@@ -30,6 +30,7 @@
 			encode_failure |
 			decode_failure |
 			transform_failure |
+			too_many_requests |
 			image_too_big.
 -type info() :: [{type, img_type()} |
 		 {width, non_neg_integer()} |
@@ -67,7 +68,14 @@ convert(Data, To, Opts) ->
 	    EncOpts = encode_options(Opts),
 	    FromCode = code(Type),
 	    Cmd = <<?CMD_CONVERT, FromCode, ToCode, EncOpts/binary, Data/binary>>,
-	    call(Cmd)
+	    Limiter = proplists:get_value(limit_by, Opts),
+	    RateLimit = proplists:get_value(rate_limit, Opts),
+	    case eimp_limit:is_blocked(Limiter, RateLimit) of
+		false ->
+		    call(Cmd);
+		true ->
+		    {error, too_many_requests}
+	    end
     end.
 
 -spec identify(binary()) -> {ok, info()} | {error, error_reason()}.
@@ -99,6 +107,8 @@ format_error(timeout) ->
     <<"Timeout">>;
 format_error(disconnected) ->
     <<"Failed to connect to external eimp process">>;
+format_error(too_many_requests) ->
+    <<"Too many requests">>;
 format_error(image_too_big) ->
     <<"Image is too big">>.
 

@@ -37,13 +37,15 @@ start_link() ->
 %%% Supervisor callbacks
 %%%===================================================================
 init([]) ->
-    Specs = lists:map(
-	      fun(I) ->
-		      Name = get_proc_name(I),
-		      {Name, {eimp_worker, start_link, [Name, I]},
-		       permanent, 5000, worker, [eimp_worker]}
-	      end, lists:seq(1, get_pool_size())),
-    {ok, {{one_for_one, 10, 1}, Specs}}.
+    Workers = lists:map(
+		fun(I) ->
+			Name = get_proc_name(I),
+			{Name, {eimp_worker, start_link, [Name, I]},
+			 permanent, 5000, worker, [eimp_worker]}
+		end, lists:seq(1, get_pool_size())),
+    Limit = {eimp_limit, {eimp_limit, start_link, []},
+	     permanent, 5000, worker, [eimp_limit]},
+    {ok, {{one_for_one, 10, 1}, [Limit|Workers]}}.
 
 %%%===================================================================
 %%% Internal functions

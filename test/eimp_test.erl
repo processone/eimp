@@ -124,6 +124,14 @@ too_big_test() ->
     {ok, [{_, Data}]} = zip:unzip(Path, [memory]),
     ?assertEqual({error, image_too_big}, eimp:convert(Data, jpeg)).
 
+too_many_requests_test() ->
+    From = png,
+    To = jpeg,
+    Opts = [{limit_by, self()}, {rate_limit, 3}],
+    lists:foreach(fun(_) -> convert(From, To, Opts) end, lists:seq(1, 3)),
+    In = read(From),
+    ?assertEqual({error, too_many_requests}, eimp:convert(In, To, Opts)).
+
 timeout_test() ->
     ?assertEqual({error, timeout}, eimp_worker:call(<<>>, 0)).
 
@@ -154,8 +162,11 @@ disconnected_test() ->
     ?assertEqual({error, disconnected}, eimp_worker:call(<<>>)).
 
 convert(From, To) ->
+    convert(From, To, []).
+
+convert(From, To, Opts) ->
     In = read(From),
-    {ok, Out} = eimp:convert(In, To),
+    {ok, Out} = eimp:convert(In, To, Opts),
     ?assertEqual(To, eimp:get_type(Out)).
 
 convert_malformed(From) ->
