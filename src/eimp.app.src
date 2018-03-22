@@ -17,7 +17,7 @@
 %%%-------------------------------------------------------------------
 {application, eimp,
  [{description,  "Erlang/Elixir image converter"},
-  {vsn,          "1.0.2"},
+  {vsn,          "1.0.3"},
   {modules,      []},
   {registered,   []},
   {applications, [kernel, stdlib]},
