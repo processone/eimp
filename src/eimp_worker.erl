@@ -176,7 +176,7 @@ start_port(I) ->
     case file:open(Path, [read]) of
         {ok, Fd} ->
             file:close(Fd),
-	    Port = open_port({spawn, Path}, [{packet, 4}, binary]),
+	    Port = open_port({spawn_executable, Path}, [{packet, 4}, binary]),
 	    Name = get_name(I),
 	    try
 		link(Port),
