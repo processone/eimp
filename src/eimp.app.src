@@ -25,7 +25,7 @@
   {env,          []},
 
   %% hex.pm packaging:
-  {files, ["src/", "include/", "c_src/eimp.c", "rebar.config",
+  {files, ["src/", "include/", "c_src/eimp.c", "rebar.config", "rebar.config.script",
            "README.md", "LICENSE.txt"]},
   {licenses, ["Apache 2.0"]},
   {maintainers, ["ProcessOne"]},
