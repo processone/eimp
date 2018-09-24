@@ -1,5 +1,6 @@
 # Version 1.0.7
 
+* Updating p1_utils to version 6ff85e8.
 * Pack rebar.config.script in hex package
 
 # Version 1.0.6
