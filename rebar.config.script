@@ -27,11 +27,7 @@ Cfg = case file:consult(filename:join([filename:dirname(SCRIPT),"vars.config"]))
               []
       end ++ [{cflags, "-g -O2 -Wall -DHAVE_WEBP -DHAVE_GD -DHAVE_JPEG -DHAVE_PNG"},
 	      {ldflags, "-lwebp -lpng -ljpeg -lgd  -lpthread"},
-	      {with_gcov, "false"},
-	      {gd, "-DHAVE_GD"},
-	      {webp, "-DHAVE_WEBP"},
-	      {jpeg, "-DHAVE_JPEG"},
-	      {png, "-DHAVE_PNG"}],
+	      {with_gcov, "false"}],
 {cflags, CfgCFlags} = lists:keyfind(cflags, 1, Cfg),
 {ldflags, CfgLDFlags} = lists:keyfind(ldflags, 1, Cfg),
 {with_gcov, CfgWithGCov} = lists:keyfind(with_gcov, 1, Cfg),
