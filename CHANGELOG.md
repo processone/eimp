@@ -1,3 +1,7 @@
+# Version 1.0.9
+
+* Include configure and vars.config.in in hex package
+
 # Version 1.0.8
 
 * Updating p1_utils to version 1.0.13.
