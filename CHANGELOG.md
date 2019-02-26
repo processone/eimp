@@ -1,3 +1,7 @@
+# Version 1.0.10
+
+* Add contribution guide
+
 # Version 1.0.9
 
 * Include configure and vars.config.in in hex package
