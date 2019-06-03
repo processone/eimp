@@ -64,7 +64,8 @@ Shorthand for `convert(In, Format, [])`.
 
 ### convert/3
 ```erl
--spec convert(In :: binary(), Format :: png|jpeg|webp|gif, Options :: convert_opts()) ->
+-spec convert(In :: binary(), Format :: png|jpeg|webp|gif,
+              Options :: [convert_opt() | limit_opt()]) ->
                    {ok, Out :: binary()} |
                    {error, Reason :: error_reason()}.
 ```
@@ -75,6 +76,13 @@ a human-readable diagnostic text using `format_error/1`.
 The function also accepts a proplist of `Options`. Currently available options are:
 - `{scale, {Width, Height}}`: scales image to the new `Width` and `Height`.
   No scaling is applied by default.
+- `{rate_limit, N}`: limit the number of calls to `N` per minute, where
+  `N > 0`. Must be used only in conjunction with `limit_by`.
+- `{limit_by, Term}`: apply `rate_limit` (see above) to the entity associtated
+  with `Term`. The `Term` may represent any value, such as an IP address, a username
+  and so on. The `Term` must not be atom `undefined`. For example a call to
+  `convert(Data, Format, [{limit_by, {192,168,0,1}}, {rate_limit, 10}])`
+  will fail with `{error, too_man_requests}` if called more than 10 times within a minute.
 
 **WARNING**: the maximum resolution of an incoming image is hardcoded to be 25Mpx.
 This is a protection against decompression bombs.
@@ -83,6 +91,13 @@ This is a protection against decompression bombs.
 ```erl
 -spec identify(Img :: binary()) -> {ok, Info :: info()} | {error, error_reason()}.
 ```
+Shorthand for `identify(Img, [])`.
+
+### identify/2
+```erl
+-spec identify(Img :: binary(), LimitOptions :: [limit_opt()]) ->
+                    {ok, Info :: info()} | {error, error_reason()}.
+```
 The function returns information about image `Img`, where `Info` is represented as:
 ```erl
 [{type, Type :: img_type()},
@@ -90,6 +105,8 @@ The function returns information about image `Img`, where `Info` is represented 
  {height, Height :: non_neg_integer()}]
 ```
 It is safe to assume that `Info` always contains all these properties.
+You can set limiting options in `LimitOptions`, that is `rate_limit` and `limit_by`.
+The meaning of the limiting options is the same as in `convert/3`.
 
 **NOTE**: If you only need to get a type of an image, you're better off using
 `get_type/1` function, because it doesn't involve interaction with `eimp` process
@@ -108,6 +125,7 @@ The `Reason` can have the following values:
                         encode_failure |
                         decode_failure |
 			transform_failure |
+			too_many_requests |
 			image_too_big.
 ```
 

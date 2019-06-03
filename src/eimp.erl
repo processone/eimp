@@ -18,8 +18,11 @@
 -module(eimp).
 
 %% API
--export([start/0, stop/0, convert/2, convert/3, identify/1, format_error/1,
-	 get_type/1, supported_formats/0, is_supported/1]).
+-export([start/0, stop/0]).
+-export([convert/2, convert/3]).
+-export([identify/1, identify/2]).
+-export([get_type/1, format_error/1]).
+-export([supported_formats/0, is_supported/1]).
 %% For internal needs only
 -export([is_gd_compiled/0]).
 
@@ -37,7 +40,9 @@
 		 {height, non_neg_integer()}].
 -type width() :: non_neg_integer().
 -type height() :: non_neg_integer().
--type convert_opts() :: [{scale, {width(), height()}}].
+-type convert_opt() :: {scale, {width(), height()}}.
+-type limit_opt() :: {limit_by, term()} |
+		     {rate_limit, pos_integer()}.
 
 -export_type([img_type/0, error_reason/0, info/0]).
 
@@ -57,7 +62,7 @@ stop() ->
 convert(Data, To) ->
     convert(Data, To, []).
 
--spec convert(binary(), img_type(), convert_opts()) ->
+-spec convert(binary(), img_type(), [convert_opt() | limit_opt()]) ->
 		     {ok, binary()} | {error, error_reason()}.
 convert(Data, To, Opts) ->
     ToCode = code(To),
@@ -80,17 +85,28 @@ convert(Data, To, Opts) ->
 
 -spec identify(binary()) -> {ok, info()} | {error, error_reason()}.
 identify(Data) ->
+    identify(Data, []).
+
+-spec identify(binary(), [limit_opt()]) -> {ok, info()} | {error, error_reason()}.
+identify(Data, Opts) ->
     case get_type(Data) of
 	unknown ->
 	    {error, unsupported_format};
 	Type ->
 	    FromCode = code(Type),
 	    Cmd = <<?CMD_IDENTIFY, FromCode, Data/binary>>,
-	    case call(Cmd) of
-		{ok, <<W:32, H:32>>} ->
-		    {ok, [{type, Type}, {width, W}, {height, H}]};
-		{error, _} = Err ->
-		    Err
+	    Limiter = proplists:get_value(limit_by, Opts),
+	    RateLimit = proplists:get_value(rate_limit, Opts),
+	    case eimp_limit:is_blocked(Limiter, RateLimit) of
+		false ->
+		    case call(Cmd) of
+			{ok, <<W:32, H:32>>} ->
+			    {ok, [{type, Type}, {width, W}, {height, H}]};
+			{error, _} = Err ->
+			    Err
+		    end;
+		true ->
+		    {error, too_many_requests}
 	    end
     end.
 
