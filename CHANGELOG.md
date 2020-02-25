@@ -1,5 +1,6 @@
 # Version 1.0.14
 
+* Updating p1_utils to version 1.0.18.
 * Update copyright year
 * Don't assume that image libs are available when configure was not called
 
