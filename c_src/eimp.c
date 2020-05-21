@@ -18,7 +18,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <erl_interface.h>
 #include <ei.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -471,7 +470,6 @@ void loop(void)
 
 int main(int argc, char *argv[])
 {
-  erl_init(NULL, 0);
   loop();
   return 0;
 }
