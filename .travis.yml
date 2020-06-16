@@ -1,0 +1,23 @@
+language: erlang
+
+os: linux
+
+dist: bionic
+
+before_install:
+  - pip install --user cpp-coveralls coveralls-merge
+
+install:
+  - sudo apt-get -q install libgd-dev libwebp-dev libpng-dev libjpeg-dev
+  - ./configure --enable-gcov
+
+script: make && make xref && make test
+
+after_success:
+  - cpp-coveralls --exclude lib --exclude tests --gcov-options '\-lp' --dump c.json
+  - coveralls-merge c.json erlang.json
+
+otp_release:
+  - 22.0
+  - 22.3
+  - 23.0
