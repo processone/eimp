@@ -1,3 +1,7 @@
+# Version 1.0.17
+
+* Updating p1_utils to version 1.0.20.
+
 # Version 1.0.16
 
 * Add Travis and support for Erlang/OTP 23.0
