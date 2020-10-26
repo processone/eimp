@@ -148,7 +148,7 @@ int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 #endif
 
 #ifdef HAVE_PNG
-static int (*ptr_png_sig_cmp)(png_const_bytep sig, size_t start, size_t num_to_check) = 0;
+static int (*ptr_png_sig_cmp)(png_bytep sig, size_t start, size_t num_to_check) = 0;
 
 int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
