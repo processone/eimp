@@ -21,6 +21,8 @@
 #include <ei.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <dlfcn.h>
+
 #ifdef HAVE_GD
 #include "gd.h"
 #endif
@@ -93,37 +95,49 @@ void eimp_jpeg_error_exit(j_common_ptr cinfo)
   longjmp(myerr->setjmp_buffer, 1);
 }
 
-int check_jpeg_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
-{
+static void (*ptr_jpeg_CreateDecompress)(j_decompress_ptr cinfo, int version, size_t structsize) = 0;
+static struct jpeg_error_mgr* (*ptr_jpeg_std_error)(struct jpeg_error_mgr *err) = 0;
+static void (*ptr_jpeg_destroy_decompress)(j_decompress_ptr cinfo) = 0;
+static void (*ptr_jpeg_mem_src)(j_decompress_ptr cinfo, const unsigned char *inbuffer, unsigned long insize) = 0;
+static int (*ptr_jpeg_read_header)(j_decompress_ptr cinfo, boolean require_image) = 0;
+
+int check_jpeg_header(uint8_t *buf, size_t size, size_t *width, size_t *height) {
+  if (ptr_jpeg_CreateDecompress == 0 || ptr_jpeg_std_error == 0 ||
+      ptr_jpeg_destroy_decompress == 0 || ptr_jpeg_mem_src == 0 || ptr_jpeg_read_header == 0)
+    return 0;
+
   struct jpeg_decompress_struct cinfo;
   struct eimp_jpeg_error_mgr jerr;
   int ret = 0;
 
-  cinfo.err = jpeg_std_error(&jerr.pub);
+  cinfo.err = (*ptr_jpeg_std_error)(&jerr.pub);
   jerr.pub.error_exit = eimp_jpeg_error_exit;
   if (setjmp(jerr.setjmp_buffer)) {
-    jpeg_destroy_decompress(&cinfo);
+    (*ptr_jpeg_destroy_decompress)(&cinfo);
     return 0;
   }
 
-  jpeg_create_decompress(&cinfo);
-  jpeg_mem_src(&cinfo, buf, size);
-  if (jpeg_read_header(&cinfo, TRUE) == JPEG_HEADER_OK) {
+  (*ptr_jpeg_CreateDecompress)(&cinfo, JPEG_LIB_VERSION,
+                               (size_t) sizeof(struct jpeg_decompress_struct));
+  (*ptr_jpeg_mem_src)(&cinfo, buf, size);
+  if ((*ptr_jpeg_read_header)(&cinfo, TRUE) == JPEG_HEADER_OK) {
     *width = cinfo.image_width;
     *height = cinfo.image_height;
     ret = 1;
   };
-  jpeg_destroy_decompress(&cinfo);
+  (*ptr_jpeg_destroy_decompress)(&cinfo);
   return ret;
 }
 #endif
 /* End of retardation */
 
 #ifdef HAVE_WEBP
+static int (*ptr_WebPGetInfo)(const uint8_t* data, size_t data_size, int* width, int* height) = 0;
+
 int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   int w, h;
-  if (WebPGetInfo(buf, size, &w, &h)) {
+  if (ptr_WebPGetInfo && (*ptr_WebPGetInfo)(buf, size, &w, &h)) {
     *width = w;
     *height = h;
     return 1;
@@ -134,6 +148,8 @@ int check_webp_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 #endif
 
 #ifdef HAVE_PNG
+static int (*ptr_png_sig_cmp)(png_const_bytep sig, size_t start, size_t num_to_check) = 0;
+
 int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
 {
   uint32_t w, h;
@@ -146,8 +162,8 @@ int check_png_header(uint8_t *buf, size_t size, size_t *width, size_t *height)
      always placed in the same place and is always of
      the same size: even if someone wants to fool us,
      gdImageCreateFromPngPtr() will fail later */
-  if (size > 24) {
-    if (!png_sig_cmp(buf, 0, 8)) {
+  if (ptr_png_sig_cmp && size > 24) {
+    if (!(*ptr_png_sig_cmp)(buf, 0, 8)) {
       memcpy(&w, buf+16, 4);
       memcpy(&h, buf+20, 4);
       *width = ntohl(w);
@@ -265,24 +281,39 @@ int write_error(uint8_t *pid, char *s)
 }
 
 #ifdef HAVE_GD
+static gdImagePtr (*ptr_gdImageCreateFromWebpPtr) (int size, void *data) = 0;
+static gdImagePtr (*ptr_gdImageCreateFromPngPtr) (int size, void *data) = 0;
+static gdImagePtr (*ptr_gdImageCreateFromJpegPtr) (int size, void *data) = 0;
+static gdImagePtr (*ptr_gdImageCreateFromGifPtr) (int size, void *data) = 0;
+static void* (*ptr_gdImageWebpPtr)(gdImagePtr im, int *size) = 0;
+static void* (*ptr_gdImagePngPtr)(gdImagePtr im, int *size) = 0;
+static void* (*ptr_gdImageJpegPtr)(gdImagePtr im, int *size, int quality) = 0;
+static void* (*ptr_gdImageGifPtr)(gdImagePtr im, int *size) = 0;
+static gdImagePtr (*ptr_gdImageScale)(const gdImagePtr src, const unsigned int new_width, const unsigned int new_height) = 0;
+static void (*ptr_gdImageDestroy)(gdImagePtr im) = 0;
+static void (*ptr_gdFree)(void *m) = 0;
 
 gdImagePtr decode(uint8_t format, uint8_t *buf, size_t size)
 {
+  if (ptr_gdImageCreateFromWebpPtr == 0 || ptr_gdImageCreateFromPngPtr == 0 ||
+      ptr_gdImageCreateFromJpegPtr == 0 || ptr_gdImageCreateFromGifPtr == 0)
+    return NULL;
+
   switch (format) {
 #ifdef HAVE_WEBP
   case WEBP:
-    return gdImageCreateFromWebpPtr(size, buf);
+    return (*ptr_gdImageCreateFromWebpPtr)(size, buf);
 #endif
 #ifdef HAVE_PNG
   case PNG:
-    return gdImageCreateFromPngPtr(size, buf);
+    return (*ptr_gdImageCreateFromPngPtr)(size, buf);
 #endif
 #ifdef HAVE_JPEG
   case JPEG:
-    return gdImageCreateFromJpegPtr(size, buf);
+    return (*ptr_gdImageCreateFromJpegPtr)(size, buf);
 #endif
   case GIF:
-    return gdImageCreateFromGifPtr(size, buf);
+    return (*ptr_gdImageCreateFromGifPtr)(size, buf);
   default:
     return NULL;
   }
@@ -293,18 +324,18 @@ void *encode(uint8_t format, gdImagePtr im, int *size)
   switch (format) {
 #ifdef HAVE_WEBP
   case WEBP:
-    return gdImageWebpPtr(im, size);
+    return (*ptr_gdImageWebpPtr)(im, size);
 #endif
 #ifdef HAVE_PNG
   case PNG:
-    return gdImagePngPtr(im, size);
+    return (*ptr_gdImagePngPtr)(im, size);
 #endif
 #ifdef HAVE_JPEG
   case JPEG:
-    return gdImageJpegPtr(im, size, -1);
+    return (*ptr_gdImageJpegPtr)(im, size, -1);
 #endif
   case GIF:
-    return gdImageGifPtr(im, size);
+    return (*ptr_gdImageGifPtr)(im, size);
   default:
     return NULL;
   }
@@ -315,8 +346,8 @@ gdImagePtr transform(gdImagePtr in, transform_s *t)
   gdImagePtr out;
 
   if (t->scale_width > 0 && t->scale_height > 0) {
-    out = gdImageScale(in, t->scale_width, t->scale_height);
-    gdImageDestroy(in);
+    out = (*ptr_gdImageScale)(in, t->scale_width, t->scale_height);
+    (*ptr_gdImageDestroy)(in);
     return out;
   } else {
     return in;
@@ -331,6 +362,19 @@ int convert(uint8_t *pid, transform_s *t, uint8_t *ibuf, size_t isize)
   uint8_t from = t->from;
   uint8_t to = t->to;
 
+  if (ptr_gdImageCreateFromWebpPtr == 0 ||
+      ptr_gdImageCreateFromPngPtr == 0 ||
+      ptr_gdImageCreateFromJpegPtr == 0 ||
+      ptr_gdImageCreateFromGifPtr == 0 ||
+      ptr_gdImageWebpPtr == 0 ||
+      ptr_gdImagePngPtr == 0 ||
+      ptr_gdImageJpegPtr == 0 ||
+      ptr_gdImageGifPtr == 0 ||
+      ptr_gdImageScale == 0 ||
+      ptr_gdImageDestroy == 0 ||
+      ptr_gdFree == 0)
+    return write_error(pid, "unsupported_format");
+
   if (is_known(from) && is_known(to)) {
     if (check_header(from, ibuf, isize, &width, &height)) {
       if (width * height < MAX_RESOLUTION) {
@@ -343,12 +387,12 @@ int convert(uint8_t *pid, transform_s *t, uint8_t *ibuf, size_t isize)
 	  return write_error(pid, "transform_failure");
 
 	uint8_t *obuf = encode(to, im, &osize);
-	gdImageDestroy(im);
+        (*ptr_gdImageDestroy)(im);
 	if (!obuf)
 	  return write_error(pid, "encode_failure");
-	
+
 	write_result = write_data(pid, obuf, osize);
-	gdFree(obuf);
+        (*ptr_gdFree)(obuf);
 	return write_result;
       } else {
 	return write_error(pid, "image_too_big");
@@ -470,6 +514,49 @@ void loop(void)
 
 int main(int argc, char *argv[])
 {
+  void *handle;
+#ifdef HAVE_JPEG
+  handle = dlopen("libjpeg.so", RTLD_LAZY);
+  if (handle) {
+    ptr_jpeg_CreateDecompress = dlsym(handle, "jpeg_CreateDecompress");
+    ptr_jpeg_std_error = dlsym(handle, "jpeg_std_error");
+    ptr_jpeg_destroy_decompress = dlsym(handle, "jpeg_destroy_compress");
+    ptr_jpeg_mem_src = dlsym(handle, "jpeg_mem_src");
+    ptr_jpeg_read_header = dlsym(handle, "jpeg_read_header");
+  }
+#endif
+
+#ifdef HAVE_WEBP
+  handle = dlopen("libwebp.so", RTLD_LAZY);
+  if (handle) {
+    ptr_WebPGetInfo = dlsym(handle, "WebPGetInfo");
+  }
+#endif
+
+#ifdef HAVE_PNG
+  handle = dlopen("libpng.so", RTLD_LAZY);
+  if (handle) {
+    ptr_png_sig_cmp = dlsym(handle, "png_sig_cmp");
+  }
+#endif
+
+#ifdef HAVE_GD
+  handle = dlopen("libgd.so", RTLD_LAZY);
+  if (handle) {
+    ptr_gdImageCreateFromWebpPtr = dlsym(handle, "gdImageCreateFromWebpPtr");
+    ptr_gdImageCreateFromPngPtr = dlsym(handle, "gdImageCreateFromPngPtr");
+    ptr_gdImageCreateFromJpegPtr = dlsym(handle, "gdImageCreateFromJpegPtr");
+    ptr_gdImageCreateFromGifPtr = dlsym(handle, "gdImageCreateFromGifPtr");
+    ptr_gdImageWebpPtr = dlsym(handle, "gdImageWebpPtr");
+    ptr_gdImagePngPtr = dlsym(handle, "gdImagePngPtr");
+    ptr_gdImageJpegPtr = dlsym(handle, "gdImageJpegPtr");
+    ptr_gdImageGifPtr = dlsym(handle, "gdImageGifPtr");
+    ptr_gdImageScale = dlsym(handle, "gdImageScale");
+    ptr_gdImageDestroy = dlsym(handle, "gdImageDestroy");
+    ptr_gdFree = dlsym(handle, "gdFree");
+  }
+#endif
+
   loop();
   return 0;
 }
