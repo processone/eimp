@@ -1,3 +1,7 @@
+# Version 1.0.18
+
+* Load external libraries dynamically
+
 # Version 1.0.17
 
 * Updating p1_utils to version 1.0.20.
