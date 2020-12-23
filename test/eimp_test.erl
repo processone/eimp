@@ -24,6 +24,7 @@ test_dir() ->
     filename:join(filename:dirname(Cwd), "test").
 
 start_test() ->
+    ?assertMatch({ok, _}, application:ensure_all_started(p1_utils)),
     ?assertEqual(ok, eimp:start()).
 
 is_supported_test() ->
