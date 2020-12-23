@@ -20,7 +20,7 @@
   {vsn,          "1.0.18"},
   {modules,      []},
   {registered,   []},
-  {applications, [kernel, stdlib]},
+  {applications, [kernel, stdlib, p1_utils]},
   {mod,          {eimp_app, []}},
   {env,          []},
 
