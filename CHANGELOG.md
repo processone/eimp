@@ -1,3 +1,8 @@
+# Version 1.0.19
+
+* Fix linker issue in openbsd
+* Add missing applications in eimp.app
+
 # Version 1.0.18
 
 * Updating p1_utils to version 1.0.21.
