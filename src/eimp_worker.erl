@@ -34,6 +34,8 @@
 		os_pid :: undefined | pos_integer(),
 		num :: pos_integer()}).
 
+-dialyzer({no_match, [call/2, init/1]}).
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -146,8 +148,7 @@ do_call(Cmd, I, Max, PoolSize, EndTime, CurrTime) ->
 	    Port = get_port((I rem PoolSize) + 1),
 	    monitor_port(Port),
 	    try
-		case port_command(Port, Cmd) of
-		    true ->
+			port_command(Port, Cmd),
 			receive
 			    {Port, Reply} ->
 				demonitor_port(Port),
@@ -157,10 +158,7 @@ do_call(Cmd, I, Max, PoolSize, EndTime, CurrTime) ->
 			after Timeout ->
 				demonitor_port(Port),
 				{error, timeout}
-			end;
-		    false ->
-			erlang:error(badarg)
-		end
+			end
 	    catch _:badarg ->
 		    demonitor_port(Port),
 		    do_call(Cmd, I+1, Max, PoolSize, EndTime,
