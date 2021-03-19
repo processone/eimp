@@ -219,9 +219,14 @@ demonitor_port(Port) ->
 
 -spec get_bin_path() -> file:filename().
 get_bin_path() ->
-    EbinDir = filename:dirname(code:which(eimp)),
-    AppDir = filename:dirname(EbinDir),
-    filename:join([AppDir, "priv", "bin"]).
+    case code:priv_dir(eimp) of
+	{error, _} ->
+	    EbinDir = filename:dirname(code:which(eimp)),
+	    AppDir = filename:dirname(EbinDir),
+	    filename:join([AppDir, "priv", "bin"]);
+	PrivDir ->
+	    filename:join([PrivDir, "bin"])
+    end.
 
 -spec get_port(pos_integer()) -> undefined | port().
 get_port(I) ->
