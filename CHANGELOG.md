@@ -1,3 +1,10 @@
+# Version 1.0.20
+
+* Update p1_utils to 1.0.22
+* Improve code for finding path of binary component
+* Don't link with image libraries, we load them dynamically
+* Two Dialyzer fixes; port_command/2 either succeeds or throws badarg
+
 # Version 1.0.19
 
 * Fix linker issue in openbsd
