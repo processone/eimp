@@ -21,7 +21,11 @@
 
 test_dir() ->
     {ok, Cwd} = file:get_cwd(),
-    filename:join(filename:dirname(Cwd), "test").
+    CwdClean = case lists:reverse(filename:split(Cwd)) of
+                   [".eunit" | Tail] -> Tail; % when using rebar2
+                   Tail -> Tail % when using rebar3
+    end,
+    filename:join(lists:reverse(["test" | CwdClean])).
 
 start_test() ->
     ?assertMatch({ok, _}, application:ensure_all_started(p1_utils)),
