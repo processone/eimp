@@ -1,6 +1,10 @@
 Erlang Image Manipulation Process
 =================================
 
+[![CI](https://github.com/processone/eimp/actions/workflows/ci.yml/badge.svg)](https://github.com/processone/eimp/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/processone/eimp/badge.svg?branch=master&service=github)](https://coveralls.io/github/processone/eimp?branch=master)
+[![Hex version](https://img.shields.io/hexpm/v/eimp.svg "Hex version")](https://hex.pm/packages/eimp)
+
 `eimp` is an Erlang/Elixir application for manipulating graphic images using
 external C libraries. It supports WebP, JPEG, PNG and GIF.
 
