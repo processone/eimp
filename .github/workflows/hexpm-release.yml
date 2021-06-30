@@ -1,4 +1,4 @@
-name: hexpm-release
+name: Hex
 
 on:
   push:
@@ -14,6 +14,10 @@ jobs:
 
       - name: Generate documentation
         run: rebar3 edoc
+      - name: Setup rebar3 hex
+        run: |
+          mkdir -p ~/.config/rebar3/
+          echo "{plugins, [rebar3_hex]}." > ~/.config/rebar3/rebar.config
 
       - name: Publish to hex.pm
         run: DIAGNOSTIC=1 rebar3 hex publish --repo hexpm --yes ; head rebar3.crashdump

@@ -13,35 +13,38 @@ jobs:
     runs-on: ubuntu-20.04
     container:
       image: erlang:${{ matrix.otp }}
-
     steps:
-
     - uses: actions/checkout@v2
-
-    - name: Cache rebar3
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cache/rebar3/
-        key: ${{matrix.otp}}-${{hashFiles('rebar.config')}}
-
     - name: Prepare libraries
       run: |
         apt-get -qq update
         apt-get -qq install libgd-dev libjpeg-dev libpng-dev libwebp-dev
-
-    - run: ./configure --enable-gcov
+    - run: ./configure
     - run: rebar3 compile
     - run: rebar3 xref
     - run: rebar3 dialyzer
     - run: rebar3 eunit -v
 
+  cover:
+    name: Cover
+    needs: [tests]
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: actions/checkout@v2
+    - name: Prepare libraries
+      run: |
+        sudo apt-get -qq update
+        sudo apt-get -qq install libgd-dev libjpeg-dev libpng-dev libwebp-dev
+    - run: ./configure --enable-gcov
+    - run: rebar3 compile
+    - run: rebar3 eunit -v
+    - run: pip install --user cpp-coveralls
+    - run: cpp-coveralls -b `pwd` --verbose --gcov-options '\-lp' --dump c.json
     - name: Send to Coveralls
-      if: matrix.otp == 24
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        COVERALLS=true rebar3 as test coveralls send
+        ADDJSONFILE=c.json COVERALLS=true rebar3 as test coveralls send
         curl -v -k https://coveralls.io/webhook \
              --header "Content-Type: application/json" \
              --data '{"repo_name":"$GITHUB_REPOSITORY",
