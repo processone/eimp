@@ -1,0 +1,17 @@
+*.swo
+*.swp
+.eunit
+.rebar
+_build
+autom4te.cache
+c_src/*.d
+c_src/*.gcda
+c_src/*.gcno
+c_src/*.o
+config.log
+config.status
+deps
+ebin
+priv
+rebar.lock
+vars.config
