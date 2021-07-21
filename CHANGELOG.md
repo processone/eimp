@@ -1,3 +1,8 @@
+# Version 1.0.21
+
+* Switch from using Travis to Github Actions as CI
+* Don't link to libdl on NetBSD
+
 # Version 1.0.20
 
 * Update p1_utils to 1.0.22
