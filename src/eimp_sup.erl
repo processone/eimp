@@ -56,7 +56,7 @@ get_proc_name(I) ->
 -spec get_pool_size() -> pos_integer().
 get_pool_size() ->
     try erlang:system_info(logical_processors) of
-        V when is_integer(V) -> V;
-        _ -> 1
+        unknown -> 1;
+        V -> V;
     catch _:_ -> 1
     end.
