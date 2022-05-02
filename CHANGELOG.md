@@ -1,3 +1,7 @@
+# Version 1.0.22
+
+* Fix crash when running under LXC
+
 # Version 1.0.21
 
 * Updating p1_utils to version 1.0.23.
