@@ -448,7 +448,7 @@ int parse_transform(uint8_t *buf, size_t size, transform_s *t)
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-  |                         Data Lenght                           |
+  |                         Data Length                           |
   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
   |                                                               |
   |                             Data                              |
@@ -457,7 +457,7 @@ int parse_transform(uint8_t *buf, size_t size, transform_s *t)
 
   where Data is always prefixed with a caller's PID represented in
   an external Erlang term format. This PID representation is prefixed
-  by its length, which is always one byte long (i.e. the maximum lenth
+  by its length, which is always one byte long (i.e. the maximum length
   can only be 255 bytes):
 
   0                   1                   2                   3

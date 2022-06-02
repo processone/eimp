@@ -74,7 +74,7 @@ Shorthand for `convert(In, Format, [])`.
                    {error, Reason :: error_reason()}.
 ```
 The function converts incoming data `In` into format `Format`. Note that you don't
-have to pass the format of incoming data, becasue it will be detected automatically
+have to pass the format of incoming data, because it will be detected automatically
 using `get_type/1` function. In the case of an error you can use `Reason` to produce
 a human-readable diagnostic text using `format_error/1`.
 The function also accepts a proplist of `Options`. Currently available options are:
