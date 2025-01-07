@@ -236,15 +236,9 @@ get_port(I) ->
 get_name(I) ->
     list_to_atom("eimp_port_" ++ integer_to_list(I)).
 
--ifdef(RAND_UNIFORM).
 get_reconnect_timeout() ->
     Num = eimp_sup:get_pool_size(),
-    rand:uniform(timer:seconds(Num)).
--else.
-get_reconnect_timeout() ->
-    Num = eimp_sup:get_pool_size(),
-    crypto:rand_uniform(1, timer:seconds(Num)).
--endif.
+    p1_rand:uniform(timer:seconds(Num)).
 
 -spec restart_after() -> reference().
 restart_after() ->
