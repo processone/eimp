@@ -165,13 +165,31 @@ AppendList = fun(Append) ->
 		     end
 	     end,
 
-Rebar3DepsFilter = fun(DepsList) ->
-			   lists:map(fun({DepName,_, {git,_, {tag,Version}}}) ->
-					     {DepName, Version};
-					(Dep) ->
-					     Dep
-				     end, DepsList)
-		   end,
+% Convert our rich deps syntax to rebar2 format:
+% https://github.com/rebar/rebar/wiki/Dependency-management
+Rebar2DepsFilter =
+fun(DepsList) ->
+	lists:map(fun({DepName, _HexVersion, Source}) ->
+	              {DepName, ".*", Source}
+		  end, DepsList)
+end,
+
+% Convert our rich deps syntax to rebar3 version definition format:
+% https://rebar3.org/docs/configuration/dependencies/#dependency-version-handling
+% https://hexdocs.pm/elixir/Version.html
+Rebar3DepsFilter =
+fun(DepsList) ->
+	lists:map(fun({DepName, HexVersion, {git, _, {tag, GitVersion}} = Source}) ->
+			  case HexVersion == ".*" of
+                              true ->
+                                  {DepName, GitVersion};
+                              false ->
+                                  {DepName, HexVersion}
+                          end;
+		     ({DepName, _HexVersion, Source}) ->
+	              {DepName, ".*", Source}
+		  end, DepsList)
+end,
 
 GlobalDepsFilter = fun(Deps) ->
 			   DepNames = lists:map(fun({DepName, _, _}) -> DepName;
@@ -187,6 +205,30 @@ GlobalDepsFilter = fun(Deps) ->
 					 end, DepNames)
 		   end,
 
+ResolveDepPath = case IsRebar3 of
+		     true ->
+			 fun("deps/" ++ Rest) ->
+				 Slash = string:str(Rest, "/"),
+				 "_build/default/lib/" ++
+				     string:sub_string(Rest, 1, Slash - 1) ++
+				     string:sub_string(Rest, Slash);
+			    (Path) ->
+				 Path
+			 end;
+		     _ ->
+			 fun(P) ->
+				 P
+			 end
+		 end,
+
+ProcessErlOpt = fun(Vals) ->
+			lists:map(
+			  fun({i, Path}) ->
+				  {i, ResolveDepPath(Path)};
+			     (ErlOpt) ->
+				  ErlOpt
+			  end, Vals)
+		end,
 GithubConfig = case {os:getenv("GITHUB_ACTIONS"), os:getenv("GITHUB_TOKEN")} of
   {"true", Token} when is_list(Token) ->
     CONFIG1 = [{coveralls_repo_token, Token},
@@ -219,21 +261,25 @@ Rules = [
 	  AppendStr("--coverage"), ""},
 	 {[port_env, "CFLAGS"], CfgWithGCov == "true",
 	  AppendStr("--coverage"), ""},
+	 {[deps], (not IsRebar3),
+	  Rebar2DepsFilter, []},
 	 {[deps], IsRebar3,
 	  Rebar3DepsFilter, []},
 	 {[plugins], IsRebar3,
-	  AppendList([pc]), []},
+	  AppendList([{pc, "~> 1.15.0"}, provider_asn1]), []},
 	 {[provider_hooks], IsRebar3,
 	  AppendList([{pre, [
 			     {compile, {pc, compile}},
 			     {clean, {pc, clean}}
 			    ]}]), []},
 	 {[plugins], os:getenv("COVERALLS") == "true",
-	  AppendList([{coveralls, {git,
-	                           "https://github.com/processone/coveralls-erl.git",
-	                           {branch, "addjsonfile"}}} ]), []},
+          AppendList([{coveralls, ".*",
+                       {git, "https://github.com/processone/coveralls-erl.git",
+                        {branch, "addjsonfile"}}} ]), []},
 	 {[deps], os:getenv("USE_GLOBAL_DEPS") /= false,
-	  GlobalDepsFilter, []}
+	  GlobalDepsFilter, []},
+	 {[erl_opts], true,
+	  ProcessErlOpt, []}
 	],
 
 

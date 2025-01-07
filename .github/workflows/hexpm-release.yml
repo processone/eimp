@@ -7,10 +7,10 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Generate documentation
         run: rebar3 edoc
@@ -39,6 +39,6 @@ jobs:
           echo "{plugins, [rebar3_hex]}." > ~/.config/rebar3/rebar.config
 
       - name: Publish to hex.pm
-        run: DIAGNOSTIC=1 rebar3 hex publish --repo hexpm --yes ; head rebar3.crashdump
+        run: DEBUG=1 rebar3 hex publish --repo hexpm --yes
         env:
           HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
