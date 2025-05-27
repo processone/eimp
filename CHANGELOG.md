@@ -1,3 +1,7 @@
+# Version 1.0.25
+
+* Updating p1_utils to version 1.0.27.
+
 # Version 1.0.24
 
 * Increase tests timeouts, to help with passing tests on slower machines
