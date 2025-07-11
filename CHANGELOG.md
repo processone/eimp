@@ -1,3 +1,7 @@
+# Version 1.0.26
+
+* Update CI containers
+
 # Version 1.0.25
 
 * Updating p1_utils to version 1.0.27.
