@@ -121,7 +121,9 @@ handle_info(Info, State) ->
 
 terminate(_Reason, #state{port = Port} = State) ->
     if is_port(Port) ->
-	    catch port_close(Port),
+	    try port_close(Port)
+            catch _:_ -> error
+            end,
 	    sets:filter(
 	      fun(Pid) ->
 		      Pid ! {'EXIT', Port, terminated},
