@@ -9,12 +9,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        otp: ['20', '25', '26', '27', '28']
+        otp: [24, 25, 26, 27, 28, 29]
     runs-on: ubuntu-24.04
     container:
       image: public.ecr.aws/docker/library/erlang:${{ matrix.otp }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Prepare libraries
       run: |
         apt-get -qq update
@@ -26,29 +26,11 @@ jobs:
     - run: REBAR=rebar3 make xref
     - run: REBAR=rebar3 make dialyzer
     - run: rebar3 eunit -v
-
-  cover:
-    name: Cover
-    needs: [tests]
-    runs-on: ubuntu-24.04
-    container:
-      image: public.ecr.aws/docker/library/erlang
-    steps:
-    - uses: actions/checkout@v4
-    - name: Prepare libraries
-      run: |
-        apt-get -qq update
-        apt-get -qq install libgd-dev libjpeg-dev libpng-dev libwebp-dev
-    - run: ./configure --enable-gcov
-    - run: REBAR=rebar3 make
-    - run: rebar3 eunit -v
-    #- run: pip install --user cpp-coveralls
-    #- run: cpp-coveralls -b `pwd` --verbose --gcov-options '\-lp' --dump c.json
     - name: Send to Coveralls
+      if: matrix.otp == 28
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        #ADDJSONFILE=c.json COVERALLS=true rebar3 as test coveralls send
         COVERALLS=true rebar3 as test coveralls send
         curl -v -k https://coveralls.io/webhook \
              --header "Content-Type: application/json" \
