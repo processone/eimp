@@ -1,3 +1,7 @@
+# Version 1.0.27
+
+* Fix new deprecation in R29
+
 # Version 1.0.26
 
 * Updating p1_utils to version 1.0.28.
